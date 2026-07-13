@@ -1,0 +1,26 @@
+npm i 
+    express  - web framework
+    sequelize - ORM instead of writting SQL
+    pg - Postgres server
+    pg-hstore -  stores JSON like objects
+    dotenv - used to store db setup, passwords, jwt tokens
+    cors - blocks request
+    helmet - security headers
+    morgan - loggers
+    jsonwebtoken - create jwt token
+    bcrypt - encrpt password
+    express-validator - checks incoming data
+    multer - file handlers
+    uuid - generate unique ids
+    mysql2 - mysql connector
+    cookie-parser - read cookies
+    compression - compresses response
+    express-rate-limit - stops spam
+    swagger-ui-express - display API docs
+    swagger-jsdoc - Reads your comments
+    winston - loggers
+    node-cron - runs schduled jobs
+    zod - validation library
+
+
+npm run dev - to run the backend server app
