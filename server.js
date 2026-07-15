@@ -1,17 +1,15 @@
 require("dotenv").config();
 
 const app = require("./index");
-const db = require("./src/model");
+
+const connectDatabase = require("./src/helpers/database.helper");
 
 const PORT = process.env.PORT || 5000;
 
 (async () => {
     try {
-        await db.sequelize.authenticate();
+        await connectDatabase();
         console.log("✅ Database Connected");
-
-        await db.sequelize.sync({ alter: true });
-        console.log("✅ Database Synced");
 
         app.listen(PORT, () => {
             console.log("================================");

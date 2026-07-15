@@ -1,66 +1,53 @@
 module.exports = (sequelize, DataTypes) => {
+    const User = sequelize.define(
+        "User",
+        {
+            id: {
+                type: DataTypes.INTEGER,
+                autoIncrement: true,
+                primaryKey: true,
+            },
 
-  const User = sequelize.define(
-    'User',
-    {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-      },
+            uuid: {
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
+            },
 
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-      },
+            firstName: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
 
-      email: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true
-      },
+            lastName: {
+                type: DataTypes.STRING,
+            },
 
-      username: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true
-      },
+            email: {
+                type: DataTypes.STRING,
+                unique: true,
+                allowNull: false,
+            },
 
-      password: {
-        type: DataTypes.STRING(255),
-        allowNull: false
-      },
+            phone: {
+                type: DataTypes.STRING(20),
+            },
 
-      status: {
-        type: DataTypes.ENUM('active', 'inactive'),
-        defaultValue: 'active'
-      },
+            password: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
 
-      employee_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-      },
+            isActive: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: true,
+            },
+        },
+        {
+            tableName: "users",
+            timestamps: true,
+            paranoid: true,
+        }
+    );
 
-      role: {
-        type: DataTypes.STRING(255),
-        defaultValue: 'CRM'
-      },
-
-      privileges: {
-        type: DataTypes.STRING(255),
-        defaultValue: 'create,edit'
-      }
-    },
-    {
-      tableName: 'users',
-
-      timestamps: true,
-
-      createdAt: 'created_at',
-
-      updatedAt: 'updated_at'
-    }
-  );
-
-  return User;
+    return User;
 };

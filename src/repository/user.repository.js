@@ -1,27 +1,26 @@
-const { User } = require("../model");
+const BaseRepository = require("./base.repository");
+const { User, Role } = require("../model");
 
-const createUser = (data) => User.create(data);
+class UserRepository extends BaseRepository {
 
-const findByEmail = (email) =>
-  User.findOne({
-    where: { email },
-  });
+    constructor() {
+        super(User);
+    }
 
-const findByUsername = (username) =>
-  User.findOne({
-    where: { username },
-  });
+    async findByEmail(email) {
+        return await User.findOne({
+            where: { email }
+        });
+    }
 
-const getAllUsers = () =>
-  User.findAll({
-    attributes: {
-      exclude: ["password"],
-    },
-  });
+    async getUserWithRoles(id) {
+        return await User.findByPk(id, {
+            include: [{
+                model: Role
+            }]
+        });
+    }
 
-module.exports = {
-  createUser,
-  findByEmail,
-  findByUsername,
-  getAllUsers,
-};
+}
+
+module.exports = new UserRepository();

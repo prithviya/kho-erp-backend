@@ -25,8 +25,39 @@ const sequelize = new Sequelize(
 
 const db = {};
 db.User = require('./user.model')(sequelize, DataTypes);
+db.UserRole = require('./userRole.model')(sequelize, DataTypes);
+db.Role = require('./role.model')(sequelize, DataTypes);
+db.Permission = require('./permission.model')(sequelize, DataTypes);
+db.RolePermission = require('./rolePermission.model')(sequelize, DataTypes);
+db.Module = require('./module.model')(sequelize, DataTypes);
 
+db.User.belongsToMany(db.Role, {
+    through: db.UserRole,
+    foreignKey: "userId",
+});
 
+db.Role.belongsToMany(db.User, {
+    through: db.UserRole,
+    foreignKey: "roleId",
+});
+
+db.Role.belongsToMany(db.Permission, {
+    through: db.RolePermission,
+    foreignKey: "roleId",
+});
+
+db.Permission.belongsToMany(db.Role, {
+    through: db.RolePermission,
+    foreignKey: "permissionId",
+});
+
+db.Module.hasMany(db.Permission, {
+    foreignKey: "moduleId"
+});
+
+db.Permission.belongsTo(db.Module, {
+    foreignKey: "moduleId"
+});
 
 // SEQUELIZE
 db.sequelize = sequelize;

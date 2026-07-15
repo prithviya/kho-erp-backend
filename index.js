@@ -51,11 +51,9 @@ app.use("/api", limiter);
 
 /**
  * Routes
- */
-app.use("/api/users", require("./src/routes/user.routes"));
-// app.use("/api/auth", require("./src/routes/auth.routes"));
-// app.use("/api/leads", require("./src/routes/lead.routes"));
-
+ */ 
+const routes = require("./src/routes");
+app.use("/api", routes);
 /**
  * Health Check
  */
