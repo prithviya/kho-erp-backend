@@ -5,11 +5,13 @@ module.exports = (sequelize, DataTypes) => {
             roleId: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
+                primaryKey: true
             },
 
             permissionId: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
+                primaryKey: true
             },
         },
         {

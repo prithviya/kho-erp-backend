@@ -1,13 +1,14 @@
 const service = require("../services/user.service");
-const {
-  createUserValidation,
-} = require("../validation/user.validation");
+const { createUserValidation, } = require("../validation/user.validation");
+const logger = require("../helpers/logger");
 
 const createUser = async (req, res) => {
+
+  logger.info("Creating user.");
   try {
     const { error } = createUserValidation.validate(req.body);
-
     if (error) {
+      logger.warn(`Validation error: ${error.details[0].message}`);
       return res.status(400).json({
         success: false,
         message: error.details[0].message,
@@ -15,6 +16,7 @@ const createUser = async (req, res) => {
     }
 
     const user = await service.createUser(req.body);
+    logger.info(`User created: ${user.name}`);
 
     res.status(201).json({
       success: true,
@@ -22,6 +24,7 @@ const createUser = async (req, res) => {
       data: user,
     });
   } catch (err) {
+    logger.error(`Error creating user: ${err.message}`);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -30,6 +33,7 @@ const createUser = async (req, res) => {
 };
 
 const getUsers = async (req, res) => {
+  logger.info("Fetching all users.");
   try {
     const users = await service.getUsers();
 
@@ -38,6 +42,7 @@ const getUsers = async (req, res) => {
       data: users,
     });
   } catch (err) {
+    logger.error(`Error fetching users: ${err.message}`);
     res.status(500).json({
       success: false,
       message: err.message,

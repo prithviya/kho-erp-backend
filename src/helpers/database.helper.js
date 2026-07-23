@@ -1,20 +1,19 @@
 const db = require("../model");
-
+const logger = require("../helpers/logger");
 const connectDatabase = async () => {
     try {
 
         await db.sequelize.authenticate();
 
-        console.log("✅ MySQL Connected Successfully");
+        logger.info("MySQL Connected Successfully");
         await db.sequelize.sync({
             alter: true
             // force: true // Drops and recreates tables (Development only)
         });
     } catch (error) {
 
-        console.error("❌ Database Connection Failed");
-
-        console.error(error.message);
+        logger.error("❌ Database Connection Failed");
+        logger.error(error.message);
 
         process.exit(1);
 

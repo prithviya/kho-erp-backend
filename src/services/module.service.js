@@ -1,55 +1,23 @@
+const BaseService = require("./base.service");
 const moduleRepository = require("../repository/module.repository");
+const logger = require("../helpers/logger");
+class ModuleService extends BaseService {
 
-class ModuleService {
+    constructor() {
+        super(moduleRepository);
+    }
 
+    // Create a new module
     async createModule(data) {
-
+        logger.info(`Creating module: ${data.name}`);
         const exists = await moduleRepository.findByCode(data.code);
-
         if (exists) {
+            logger.warn(`Module creation failed for code: ${data.code}`);
             throw new Error("Module code already exists.");
         }
-
-        return moduleRepository.create(data);
-
+        logger.info(`Creating module: ${data.name}`);
+        return this.create(data);
     }
-
-    async getModules() {
-        return moduleRepository.findAll({
-            order: [["displayOrder", "ASC"]]
-        });
-    }
-
-    async getModule(id) {
-
-        const module = await moduleRepository.findById(id);
-
-        if (!module) {
-            throw new Error("Module not found.");
-        }
-
-        return module;
-
-    }
-
-    async updateModule(id, data) {
-
-        const module = await this.getModule(id);
-
-        return module.update(data);
-
-    }
-
-    async deleteModule(id) {
-
-        const module = await this.getModule(id);
-
-        await module.destroy();
-
-        return true;
-
-    }
-
 }
 
 module.exports = new ModuleService();

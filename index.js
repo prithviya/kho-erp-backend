@@ -5,7 +5,7 @@ const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
 const fs = require("fs");
-
+const logger = require("./src/helpers/logger");
 require("dotenv").config();
 
 const app = express();
@@ -87,7 +87,7 @@ app.get("/", (req, res, next) => {
 const buildPath = path.join(__dirname, "build");
 
 if (fs.existsSync(buildPath)) {
-    console.log("✅ React build detected");
+    logger.info("✅ React build detected");
 
     app.use(express.static(buildPath));
 
@@ -95,7 +95,7 @@ if (fs.existsSync(buildPath)) {
         res.sendFile(path.join(buildPath, "index.html"));
     });
 } else {
-    console.log("⚠️ React build not found. Running Backend Only.");
+    logger.info("⚠️ React build not found. Running Backend Only.");
 }
 
 /**

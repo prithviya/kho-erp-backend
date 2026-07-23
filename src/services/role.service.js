@@ -1,58 +1,43 @@
+const BaseService = require("./base.service");
 const roleRepository = require("../repository/role.repository");
+const logger = require("../helpers/logger");
+class RoleService extends BaseService {
 
-class RoleService {
+    constructor() {
+        super(roleRepository);
+    }
 
+    // Create a new role
     async createRole(data) {
-
+        logger.info(`Creating role: ${data.name}`);
         const exists = await roleRepository.findByCode(data.code);
-
         if (exists) {
+            logger.warn(`Role creation failed for code: ${data.code}`);
             throw new Error("Role code already exists.");
         }
+        logger.info(`Role created successfully: ${data.name}`);
+        return this.create(data);
 
-        return await roleRepository.create(data);
     }
 
+    // Get all roles with optional filters
     async getRoles() {
-
-        return await roleRepository.findAll({
+        logger.info("Fetching all roles.");
+        return this.findAll({
             order: [["name", "ASC"]]
         });
-
     }
 
+    // Get a role by ID
     async updateRole(id, data) {
-
-        const role = await roleRepository.findById(id);
-
-        if (!role) {
-            throw new Error("Role not found.");
-        }
-
-        if (data.code) {
-            const existingRole = await roleRepository.findByCode(data.code);
-
-            if (existingRole && existingRole.id !== Number(id)) {
-                throw new Error("Role code already exists.");
-            }
-        }
-
-        await role.update(data);
-
-        return role;
+        logger.info(`Updating role with ID: ${id}`);
+        return this.update(id, data);
     }
 
+    // Delete a role by ID
     async deleteRole(id) {
-
-        const role = await roleRepository.findById(id);
-
-        if (!role) {
-            throw new Error("Role not found.");
-        }
-
-        await role.destroy();
-
-        return true;
+        logger.info(`Deleting role with ID: ${id}`);
+        return this.delete(id);
     }
 
 }

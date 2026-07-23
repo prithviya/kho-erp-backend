@@ -1,52 +1,23 @@
+const BaseService = require("./base.service");
 const permissionRepository = require("../repository/permission.repository");
+const logger = require("../helpers/logger");
+class PermissionService extends BaseService {
 
-class PermissionService {
+    constructor() {
+        super(permissionRepository);
+    }
 
+    // Create a new permission
     async createPermission(data) {
-
-        const exists = await permissionRepository.findByKey(data.permissionKey);
-
+        logger.info(`Creating permission: ${data.name}`);
+        const exists = await permissionRepository.findByPermissionKey(data.permissionKey);
         if (exists) {
-            throw new Error("Permission already exists");
+            logger.warn(`Permission creation failed for key: ${data.permissionKey}`);
+            throw new Error("Permission already exists.");
         }
-
-        return permissionRepository.create(data);
+        logger.info(`Creating permission: ${data.name}`);
+        return this.create(data);
     }
-
-    async getPermissions() {
-        return permissionRepository.findAll();
-    }
-
-    async getPermission(id) {
-    
-            const Permission = await PermissionRepository.findById(id);
-    
-            if (!Permission) {
-                throw new Error("Permission not found.");
-            }
-    
-            return Permission;
-    
-        }
-    
-        async updatePermission(id, data) {
-    
-            const Permission = await this.getPermission(id);
-    
-            return Permission.update(data);
-    
-        }
-    
-        async deletePermission(id) {
-    
-            const Permission = await this.getPermission(id);
-    
-            await Permission.destroy();
-    
-            return true;
-    
-        }
-
 }
 
 module.exports = new PermissionService();
