@@ -7,7 +7,7 @@ const connectDatabase = async () => {
 
         logger.info("MySQL Connected Successfully");
         await db.sequelize.sync({
-            alter: true
+            alter: true,
             // force: true // Drops and recreates tables (Development only)
         });
     } catch (error) {

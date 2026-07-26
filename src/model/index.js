@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
+const sqlLogger = require("../helpers/sqlLogger");
 
 require('dotenv').config();
 
@@ -9,11 +10,15 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
+        dialect: process.env.DB_TYPE,
+        logging: process.env.ENABLE_SQL_LOG === "true"
+            ? (sql, timing) => {
+                sqlLogger.info(`[SQL] ${sql}`);
+                sqlLogger.info(`[TIME] ${timing} ms`);
+            }
+            : false,
 
-        dialect: process.env.DB_TYPE, // postgres or mysql
-
-        logging: false,
-
+        benchmark: true,
         pool: {
             max: 20,
             min: 0,
@@ -32,6 +37,10 @@ db.RolePermission = require('./rolePermission.model')(sequelize, DataTypes);
 db.Module = require('./module.model')(sequelize, DataTypes);
 db.RefreshToken = require("./refreshToken.model")(sequelize, DataTypes);
 db.PasswordResetToken = require("./passwordResetToken.model")(sequelize, DataTypes);
+db.LeadSource = require("./leadSource.model")(sequelize, DataTypes);
+db.LeadStatus = require("./leadStatus.model")(sequelize, DataTypes);
+db.LeadPriority = require("./leadPriority.model")(sequelize, DataTypes);
+
 
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",

@@ -1,3 +1,4 @@
+// Authentication middleware to verify JWT tokens and user status
 const jwt = require("jsonwebtoken");
 const { User } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");

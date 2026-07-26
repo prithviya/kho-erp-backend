@@ -2,38 +2,82 @@ const { RefreshToken } = require("../model");
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require("../helpers/jwt");
 const logger = require("../helpers/logger");
 const authRepository = require("../repository/auth.repository");
+const refreshTokenRepository = require("../repository/refreshToken.repository");
 
 class RefreshTokenService {
 
     // Create a new refresh token for a user
-    async create(user) {
+    async create(user, sessionInfo = {}) {
         logger.info(`Creating refresh token for user: ${user.id}`);
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
-        await RefreshToken.create({
+        const refreshExpiry = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+        );
+        await refreshTokenRepository.create({
             userId: user.id,
             token: refreshToken,
-            expiresAt: new Date(
-                Date.now() + (7 * 24 * 60 * 60 * 1000)
-            )
+            deviceName: sessionInfo.deviceName || "Unknown Device",
+            browser: sessionInfo.browser || null,
+            os: sessionInfo.os || null,
+            ipAddress: sessionInfo.ipAddress || null,
+            expiresAt: refreshExpiry,
+            lastUsedAt: new Date()
         });
         logger.info(`Refresh token created for user: ${user.id}`);
         return { accessToken, refreshToken };
     }
 
     // Refresh the access token using a valid refresh token
-    async refresh(refreshToken) {
-        logger.info(`Attempting to refresh access token with refresh token: ${refreshToken}`);
-        verifyRefreshToken(refreshToken);
-        const token = await authRepository.findRefreshToken(refreshToken);
-        if (!token || token.isRevoked) {
-            logger.warn(`Refresh token is invalid or revoked: ${refreshToken}`);
+    async refreshToken(refreshToken) {
+
+        const tokenRecord = await authRepository.findRefreshToken(refreshToken);
+
+        if (!tokenRecord) {
             throw new Error("Invalid refresh token.");
         }
-        const user = await authRepository.findUserById(token.userId);
-        logger.info(`Refreshing access token for user: ${user.id}`);
+
+        if (new Date() > tokenRecord.expiresAt) {
+            throw new Error("Refresh token expired.");
+        }
+
+        const user = await authRepository.findUserById(tokenRecord.userId);
+
+        if (!user) {
+            throw new Error("User not found.");
+        }
+
+        // 1. Revoke current refresh token
+        await authRepository.revokeRefreshToken(tokenRecord.id);
+
+        // 2. Generate new tokens
         const accessToken = generateAccessToken(user);
-        return { accessToken };
+
+        const newRefreshToken = generateRefreshToken(user);
+
+        // 3. Save new refresh token
+        await authRepository.createRefreshToken({
+
+            userId: user.id,
+
+            token: newRefreshToken,
+
+            expiresAt: new Date(
+                Date.now() + 7 * 24 * 60 * 60 * 1000
+            ),
+
+            rotatedFromTokenId: tokenRecord.id
+
+        });
+
+        return {
+
+            accessToken,
+
+            refreshToken: newRefreshToken
+
+        };
+
     }
 
     // Revoke a refresh token

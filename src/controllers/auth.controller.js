@@ -3,6 +3,7 @@ const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
 const logger = require("../helpers/logger");
 const passwordService = require("../services/password.service");
+const UAParser = require("ua-parser-js");
 
 exports.register = asyncHandler(async (req, res) => {
     logger.info(`Registering user: ${req.body.username}`);
@@ -16,9 +17,16 @@ exports.register = asyncHandler(async (req, res) => {
 });
 
 exports.login = asyncHandler(async (req, res) => {
-    logger.info(`Logging in user: ${req.body.username}`);
-    const result = await authService.login(req.body);
-    logger.info(`User logged in: ${result.user.username}`);
+    const parser = new UAParser(req.headers["user-agent"]);
+    const sessionInfo = {
+        deviceName: parser.getDevice().model || "Desktop",
+        browser: parser.getBrowser().name,
+        os: parser.getOS().name,
+        ipAddress: req.ip
+    };
+    logger.info(`Logging in user: ${req.body.email} from IP: ${sessionInfo.ipAddress}`);
+    const result = await authService.login(req.body, sessionInfo);
+    logger.info(`User logged in: ${result.user.email}`);
     return ApiResponse.success(
         res,
         "Login successful.",
@@ -27,11 +35,11 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 exports.refreshToken = asyncHandler(async (req, res) => {
-    logger.info(`Refreshing token for user: ${req.user.username}`);
+    logger.info(`Refreshing token for user`);
     const result = await authService.refreshToken(
         req.body.refreshToken
     );
-    logger.info(`Access token generated for user: ${req.user.username}`);
+    logger.info(`Access token generated for user `);
     return ApiResponse.success(
         res,
         "Access token generated successfully.",
@@ -40,9 +48,9 @@ exports.refreshToken = asyncHandler(async (req, res) => {
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-    logger.info(`Logging out user: ${req.user.username}`);
+    logger.info(`Logging out user: ${req.user.email}`);
     await authService.logout(req.body.refreshToken);
-    logger.info(`User logged out: ${req.user.username}`);
+    logger.info(`User logged out: ${req.user.email}`);
     return ApiResponse.success(
         res,
         "Logged out successfully."
@@ -50,9 +58,9 @@ exports.logout = asyncHandler(async (req, res) => {
 });
 
 exports.logoutAll = asyncHandler(async (req, res) => {
-    logger.info(`Logging out user from all devices: ${req.user.username}`);
+    logger.info(`Logging out user from all devices: ${req.user.email}`);
     await authService.logoutAll(req.user.id);
-    logger.info(`User logged out from all devices: ${req.user.username}`);
+    logger.info(`User logged out from all devices: ${req.user.email}`);
     return ApiResponse.success(
         res,
         "Logged out from all devices successfully."
@@ -79,5 +87,82 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     return ApiResponse.success(
         res,
         "Password reset successfully."
+    );
+});
+
+exports.changePassword = asyncHandler(async (req, res) => {
+    logger.info(`Changing password for user: ${req.user.username}`);
+    await authService.changePassword(
+        req.user.id,
+        req.body
+    );
+    logger.info(`Password changed successfully for user: ${req.user.username}`);
+    return ApiResponse.success(
+        res,
+        "Password changed successfully."
+    );
+});
+
+exports.getProfile = asyncHandler(async (req, res) => {
+    logger.info(`Fetching profile for user ID: ${req.user.id}`);
+    const user = await authService.getProfile(req.user.id);
+    logger.info(`Profile fetched successfully for user ID: ${req.user.id}`);
+    return ApiResponse.success(
+        res,
+        "Profile fetched successfully.",
+        user
+    );
+});
+
+exports.updateProfile = asyncHandler(async (req, res) => {
+    logger.info(`Updating profile for user ID: ${req.user.id}`);
+    const user = await authService.updateProfile(
+        req.user.id,
+        req.body
+    );
+    logger.info(`Profile updated successfully for user ID: ${req.user.id}`);
+    return ApiResponse.success(
+        res,
+        "Profile updated successfully.",
+        user
+    );
+
+});
+
+exports.getSessions = asyncHandler(async (req, res) => {
+    logger.info(`Fetching sessions for user ID: ${req.user.id}`);
+    const sessions = await authService.getSessions(
+        req.user.id
+    );
+    logger.info(`Sessions fetched successfully for user ID: ${req.user.id}`);
+    return ApiResponse.success(
+        res,
+        "Sessions fetched successfully.",
+        sessions
+    );
+});
+
+exports.removeSession = asyncHandler(async (req, res) => {
+    logger.info(`Removing session for user ID: ${req.user.id}`);
+    await authService.removeSession(
+        req.user.id,
+        req.params.id
+    );
+    logger.info(`Session removed successfully for user ID: ${req.user.id}`);
+    return ApiResponse.success(
+        res,
+        "Session removed successfully."
+    );
+});
+
+
+exports.getUserPermissions = asyncHandler(async(req,res)=>{
+    const permissions = await authService.getUserPermissions(
+        req.user.id
+    );
+    return ApiResponse.success(
+        res,
+        "Permissions fetched successfully.",
+        permissions
     );
 });

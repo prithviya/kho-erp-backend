@@ -23,7 +23,6 @@ class PasswordService {
         });
         logger.info(`Password reset token generated for user: ${user.id}`);
         return { resetToken: token };
-
     }
 
     async resetPassword(data) {
@@ -50,7 +49,6 @@ class PasswordService {
         logger.info(`Marking password reset token as used: ${token.id}`);
         await passwordResetRepository.markAsUsed(token.id);
         return true;
-
     }
 
 }
