@@ -1,5 +1,4 @@
 module.exports = (sequelize, DataTypes) => {
-
     return sequelize.define(
         "PasswordResetToken",
         {
@@ -8,23 +7,19 @@ module.exports = (sequelize, DataTypes) => {
                 autoIncrement: true,
                 primaryKey: true
             },
-
             userId: {
                 type: DataTypes.INTEGER,
                 allowNull: false
             },
-
             token: {
                 type: DataTypes.STRING(255),
                 allowNull: false,
                 unique: true
             },
-
             expiresAt: {
                 type: DataTypes.DATE,
                 allowNull: false
             },
-
             isUsed: {
                 type: DataTypes.BOOLEAN,
                 defaultValue: false
@@ -35,5 +30,4 @@ module.exports = (sequelize, DataTypes) => {
             timestamps: true
         }
     );
-
 };

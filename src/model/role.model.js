@@ -7,7 +7,6 @@ module.exports = (sequelize, DataTypes) => {
                 autoIncrement: true,
                 primaryKey: true,
             },
-
             name: {
                 type: DataTypes.STRING(100),
                 allowNull: false,
@@ -18,11 +17,9 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 unique: true,
             },
-
             description: {
                 type: DataTypes.STRING(255),
             },
-
             isActive: {
                 type: DataTypes.BOOLEAN,
                 defaultValue: true,
@@ -34,6 +31,5 @@ module.exports = (sequelize, DataTypes) => {
             paranoid: true,
         }
     );
-
     return Role;
 };

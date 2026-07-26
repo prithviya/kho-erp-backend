@@ -7,36 +7,29 @@ const path = require("path");
 const fs = require("fs");
 const logger = require("./src/helpers/logger");
 require("dotenv").config();
-
 const app = express();
-
 /**
  * Trust Proxy
  */
 if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
 }
-
 /**
  * Security Middleware
  */
 app.use(helmet());
-
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin: process.env.FRONTEND_URL || "http://localhost:5173",
         credentials: true,
     })
 );
-
 app.use(morgan("dev"));
-
 /**
  * Body Parser
  */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 /**
  * Rate Limiter
  */
@@ -46,15 +39,12 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
-
 app.use("/api", limiter);
-
 /**
  * Routes
  */ 
 const routes = require("./src/routes");
 app.use("/api", routes);
-
 /**
  * Health Check
  */
@@ -65,40 +55,32 @@ app.get("/health", (req, res) => {
         timestamp: new Date(),
     });
 });
-
 /**
  * Root API
  */
 app.get("/", (req, res, next) => {
     const buildPath = path.join(__dirname, "build");
-
     if (fs.existsSync(buildPath)) {
         return next();
     }
-
     return res.json({
         success: true,
         message: "ERP Backend API Running",
     });
 });
-
 /**
  * Serve React Build (Only if build folder exists)
  */
 const buildPath = path.join(__dirname, "build");
-
 if (fs.existsSync(buildPath)) {
     logger.info("✅ React build detected");
-
     app.use(express.static(buildPath));
-
     app.get(/^\/(?!api|health).*/, (req, res) => {
         res.sendFile(path.join(buildPath, "index.html"));
     });
 } else {
     logger.info("⚠️ React build not found. Running Backend Only.");
 }
-
 /**
  * 404 Handler
  */
@@ -108,13 +90,11 @@ app.use((req, res) => {
         message: "Route Not Found",
     });
 });
-
 /**
  * Global Error Handler
  */
 app.use((err, req, res, next) => {
     console.error(err);
-
     res.status(err.status || 500).json({
         success: false,
         message: err.message || "Internal Server Error",
@@ -123,5 +103,4 @@ app.use((err, req, res, next) => {
         }),
     });
 });
-
 module.exports = app;

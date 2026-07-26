@@ -1,5 +1,4 @@
 const Joi = require("joi");
-
 exports.createPermissionSchema = Joi.object({
     module: Joi.string().trim().required(),
     action: Joi.string().trim().required(),

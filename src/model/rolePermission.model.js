@@ -7,7 +7,6 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 primaryKey: true
             },
-
             permissionId: {
                 type: DataTypes.INTEGER,
                 allowNull: false,

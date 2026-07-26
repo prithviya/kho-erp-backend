@@ -1,5 +1,4 @@
 module.exports = (sequelize, DataTypes) => {
-
     const Permission = sequelize.define(
         "Permission",
         {
@@ -8,27 +7,22 @@ module.exports = (sequelize, DataTypes) => {
                 autoIncrement: true,
                 primaryKey: true
             },
-
             moduleId: {
                 type: DataTypes.INTEGER,
                 allowNull: false
             },
-
             action: {
                 type: DataTypes.STRING(100),
                 allowNull: false
             },
-
             permissionKey: {
                 type: DataTypes.STRING(150),
                 allowNull: false,
                 unique: true
             },
-
             description: {
                 type: DataTypes.STRING(255)
             },
-
             isActive: {
                 type: DataTypes.BOOLEAN,
                 defaultValue: true
@@ -40,6 +34,5 @@ module.exports = (sequelize, DataTypes) => {
             paranoid: true
         }
     );
-
     return Permission;
 };

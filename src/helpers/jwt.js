@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken");
-
 exports.generateAccessToken = (user) => {
-
     return jwt.sign(
         {
             id: user.id,
@@ -12,11 +10,8 @@ exports.generateAccessToken = (user) => {
             expiresIn: process.env.JWT_EXPIRES_IN
         }
     );
-
 };
-
 exports.generateRefreshToken = (user) => {
-
     return jwt.sign(
         {
             id: user.id
@@ -26,9 +21,7 @@ exports.generateRefreshToken = (user) => {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN
         }
     );
-
 };
-
 exports.verifyRefreshToken = (token) => {
     return jwt.verify(
         token,

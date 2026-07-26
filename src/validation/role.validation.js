@@ -1,5 +1,4 @@
 const Joi = require("joi");
-
 exports.createRoleSchema = Joi.object({
     name: Joi.string().trim().required(),
     code: Joi.string().trim().uppercase().required(),

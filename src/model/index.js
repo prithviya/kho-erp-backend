@@ -1,8 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sqlLogger = require("../helpers/sqlLogger");
-
 require('dotenv').config();
-
 const sequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,
@@ -17,7 +15,6 @@ const sequelize = new Sequelize(
                 sqlLogger.info(`[TIME] ${timing} ms`);
             }
             : false,
-
         benchmark: true,
         pool: {
             max: 20,
@@ -27,7 +24,6 @@ const sequelize = new Sequelize(
         }
     }
 );
-
 const db = {};
 db.User = require('./user.model')(sequelize, DataTypes);
 db.UserRole = require('./userRole.model')(sequelize, DataTypes);
@@ -40,13 +36,10 @@ db.PasswordResetToken = require("./passwordResetToken.model")(sequelize, DataTyp
 db.LeadSource = require("./leadSource.model")(sequelize, DataTypes);
 db.LeadStatus = require("./leadStatus.model")(sequelize, DataTypes);
 db.LeadPriority = require("./leadPriority.model")(sequelize, DataTypes);
-
-
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",
     as: "passwordResetTokens"
 });
-
 db.PasswordResetToken.belongsTo(db.User, {
     foreignKey: "userId",
     as: "user"
@@ -55,7 +48,6 @@ db.User.hasMany(db.RefreshToken, {
     foreignKey: "userId",
     as: "refreshTokens"
 });
-
 db.RefreshToken.belongsTo(db.User, {
     foreignKey: "userId",
     as: "user"
@@ -66,39 +58,31 @@ db.User.belongsToMany(db.Role, {
     otherKey: "roleId",
     as: "roles"
 });
-
 db.Role.belongsToMany(db.User, {
     through: db.UserRole,
     foreignKey: "roleId",
     otherKey: "userId",
     as: "users"
 });
-
 db.Role.belongsToMany(db.Permission, {
     through: db.RolePermission,
     foreignKey: "roleId",
     otherKey: "permissionId",
     as: "permissions"
 });
-
 db.Permission.belongsToMany(db.Role, {
     through: db.RolePermission,
     foreignKey: "permissionId",
     otherKey: "roleId",
     as: "roles"
 });
-
 db.Module.hasMany(db.Permission, {
     foreignKey: "moduleId"
 });
-
 db.Permission.belongsTo(db.Module, {
     foreignKey: "moduleId"
 });
-
 // SEQUELIZE
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
-
-
 module.exports = db;

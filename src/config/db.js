@@ -2,11 +2,8 @@
 const { Pool } = require('pg');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
-
 const DB_TYPE = process.env.DB_TYPE || 'postgres';
-
 let pool;
-
 // 🔹 Convert Postgres placeholders → MySQL
 function convertPlaceholders(query, dbType) {
   if (dbType === 'mysql') {
@@ -14,7 +11,6 @@ function convertPlaceholders(query, dbType) {
   }
   return query;
 }
-
 // 🔹 Initialize Pool
 if (DB_TYPE === 'postgres') {
   pool = new Pool({
@@ -27,12 +23,10 @@ if (DB_TYPE === 'postgres') {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
   });
-
   pool.on('error', (err) => {
     console.error('❌ PostgreSQL error:', err);
     process.exit(1);
   });
-
 } else if (DB_TYPE === 'mysql') {
   pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -44,20 +38,16 @@ if (DB_TYPE === 'postgres') {
     connectionLimit: 20,
     queueLimit: 0,
   });
-
 } else {
   throw new Error('Invalid DB_TYPE. Use "postgres" or "mysql"');
 }
-
 // 🔹 Common Query Function
 async function query(text, params = []) {
   const sql = convertPlaceholders(text, DB_TYPE);
-
   try {
     if (DB_TYPE === 'postgres') {
       return await pool.query(sql, params);
     }
-
     if (DB_TYPE === 'mysql') {
       const [rows] = await pool.execute(sql, params);
       return { rows };
@@ -69,7 +59,6 @@ async function query(text, params = []) {
     throw err;
   }
 }
-
 // 🔹 Optional helper (useful for transactions later)
 async function getClient() {
   if (DB_TYPE === 'postgres') {
@@ -77,7 +66,6 @@ async function getClient() {
   }
   return await pool.getConnection();
 }
-
 module.exports = {
   dbType: DB_TYPE,
   query,
