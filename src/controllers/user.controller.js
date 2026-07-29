@@ -1,9 +1,7 @@
 const service = require("../services/user.service");
 const { createUserValidation, } = require("../validation/user.validation");
 const logger = require("../helpers/logger");
-
 const createUser = async (req, res) => {
-
   logger.info("Creating user.");
   try {
     const { error } = createUserValidation.validate(req.body);
@@ -14,10 +12,8 @@ const createUser = async (req, res) => {
         message: error.details[0].message,
       });
     }
-
     const user = await service.createUser(req.body);
     logger.info(`User created: ${user.name}`);
-
     res.status(201).json({
       success: true,
       message: "User Created Successfully",
@@ -31,12 +27,10 @@ const createUser = async (req, res) => {
     });
   }
 };
-
 const getUsers = async (req, res) => {
   logger.info("Fetching all users.");
   try {
     const users = await service.getUsers();
-
     res.json({
       success: true,
       data: users,
@@ -49,7 +43,6 @@ const getUsers = async (req, res) => {
     });
   }
 };
-
 module.exports = {
   createUser,
   getUsers,

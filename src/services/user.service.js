@@ -1,7 +1,6 @@
 const bcrypt = require("bcrypt");
 const repository = require("../repository/user.repository");
 const logger = require("../helpers/logger");
-
 const createUser = async (data) => {
   logger.info(`Creating user: ${data.username}`);
   const email = await repository.findByEmail(data.email);
@@ -18,13 +17,11 @@ const createUser = async (data) => {
   logger.info(`User created successfully: ${data.username}`);
   return repository.createUser(data);
 };
-
 // Get all users
 const getUsers = () => {
   logger.info("Fetching all users.");
   return repository.getAllUsers();
 };
-
 module.exports = {
   createUser,
   getUsers,

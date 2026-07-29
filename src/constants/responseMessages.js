@@ -19,5 +19,12 @@ module.exports = {
         UPDATED: "User updated successfully.",
         DELETED: "User deleted successfully.",
         EMAIL_EXISTS: "Email already exists."
+    },
+    LEAD: {
+        CREATED: "Lead created successfully.",
+        UPDATED: "Lead updated successfully.",
+        DELETED: "Lead deleted successfully.",
+        FETCHED: "Leads fetched successfully.",
+        NOT_FOUND: "Lead not found."
     }
 };

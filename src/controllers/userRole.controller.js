@@ -1,7 +1,6 @@
 const userRoleService = require("../services/userRole.service");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
-
 exports.assignRoles = asyncHandler(async (req, res) => {
     const roles = await userRoleService.assignRoles(
         req.params.userId, req.body.roleIds);
@@ -11,7 +10,6 @@ exports.assignRoles = asyncHandler(async (req, res) => {
         roles
     );
 });
-
 exports.getRoles = asyncHandler(async (req, res) => {
     const roles = await userRoleService.getRoles(
         req.params.userId);
@@ -21,7 +19,6 @@ exports.getRoles = asyncHandler(async (req, res) => {
         roles
     );
 });
-
 exports.removeRole = asyncHandler(async (req, res) => {
     await userRoleService.removeRole(
         req.params.userId,

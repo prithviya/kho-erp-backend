@@ -1,7 +1,6 @@
 const userRoleRepository = require("../repository/userRole.repository");
 const { User, Role } = require("../model");
 const logger = require("../helpers/logger");
-
 class UserRoleService {
     async assignRoles(userId, roleIds) {
         logger.info(`Assigning roles to user with ID: ${userId}`);
@@ -15,7 +14,6 @@ class UserRoleService {
                 id: roleIds
             }
         });
-
         if (roles.length !== roleIds.length) {
             logger.warn(`One or more roles are invalid for user ID: ${userId}`);
             throw new Error("One or more roles are invalid.");
@@ -24,12 +22,10 @@ class UserRoleService {
         await userRoleRepository.assignRoles(userId, roleIds);
         return await userRoleRepository.getRoles(userId);
     }
-
     async getRoles(userId) {
         logger.info(`Fetching roles for user with ID: ${userId}`);
         return await userRoleRepository.getRoles(userId);
     }
-
     async removeRole(userId, roleId) {
         logger.info(`Removing role from user with ID: ${userId}`);
         const record = await userRoleRepository.findUserRole(
@@ -42,9 +38,6 @@ class UserRoleService {
         }
         await userRoleRepository.removeRole(userId, roleId);
         return true;
-
     }
-
 }
-
 module.exports = new UserRoleService();
