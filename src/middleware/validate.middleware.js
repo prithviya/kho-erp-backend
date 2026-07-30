@@ -1,15 +1,11 @@
 const { validationResult } = require("express-validator");
+const ApiResponse = require("../helpers/apiResponse");
+
 module.exports = (req, res, next) => {
-    console.log("===== VALIDATE MIDDLEWARE =====");
-    console.log("Body:", req.body);
     const errors = validationResult(req);
-    console.log("Errors:", errors.array());
     if (!errors.isEmpty()) {
-        return res.status(400).json({
-            success: false,
-            message: "Validation failed.",
-            errors: errors.array()
-        });
+        const formatted = errors.array().map(({ path, msg }) => ({ field: path, message: msg }));
+        return ApiResponse.error(res, "Validation failed.", formatted, 422);
     }
     next();
 };

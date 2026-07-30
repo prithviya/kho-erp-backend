@@ -1,11 +1,8 @@
 const { RefreshToken } = require("../model");
-
 class RefreshTokenRepository {
-
     async create(data) {
         return await RefreshToken.create(data);
     }
-
     async findByToken(token) {
         return await RefreshToken.findOne({
             where: {
@@ -14,14 +11,12 @@ class RefreshTokenRepository {
             }
         });
     }
-
     async revoke(token) {
         return await RefreshToken.update(
             { isRevoked: true },
             { where: { token } }
         );
     }
-
     async revokeRefreshToken(id) {
         return await RefreshToken.update(
             {
@@ -32,5 +27,4 @@ class RefreshTokenRepository {
         );
     }
 }
-
 module.exports = new RefreshTokenRepository();

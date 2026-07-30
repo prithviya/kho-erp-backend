@@ -3,12 +3,10 @@ const router = require("express").Router();
 const authController = require("../controllers/auth.controller");
 const authenticate = require("../middleware/auth.middleware");
 const validate = require("../middleware/validate.middleware");
-
 const {
     changePasswordValidation,
     updateProfileValidation
 } = require("../validation/auth.validation");
-
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 router.post("/refresh-token", authController.refreshToken);
@@ -22,5 +20,4 @@ router.put("/profile", authenticate, updateProfileValidation, validate, authCont
 router.get("/sessions", authenticate, authController.getSessions);
 router.delete("/sessions/:id", authenticate, authController.removeSession);
 router.get("/permissions", authenticate, authController.getUserPermissions);
-
 module.exports = router;

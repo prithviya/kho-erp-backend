@@ -1,18 +1,14 @@
 const BaseRepository = require("./base.repository");
 const { User, Role } = require("../model");
-
 class UserRepository extends BaseRepository {
-
     constructor() {
         super(User);
     }
-
     async findByEmail(email) {
         return await User.findOne({
             where: { email }
         });
     }
-
     async getUserWithRoles(id) {
         return await User.findByPk(id, {
             include: [{
@@ -20,7 +16,5 @@ class UserRepository extends BaseRepository {
             }]
         });
     }
-
 }
-
 module.exports = new UserRepository();

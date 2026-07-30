@@ -2,11 +2,9 @@ const BaseService = require("./base.service");
 const permissionRepository = require("../repository/permission.repository");
 const logger = require("../helpers/logger");
 class PermissionService extends BaseService {
-
     constructor() {
         super(permissionRepository);
     }
-
     // Create a new permission
     async createPermission(data) {
         logger.info(`Creating permission: ${data.name}`);
@@ -19,5 +17,4 @@ class PermissionService extends BaseService {
         return this.create(data);
     }
 }
-
 module.exports = new PermissionService();

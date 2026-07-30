@@ -2,11 +2,9 @@ const BaseService = require("./base.service");
 const moduleRepository = require("../repository/module.repository");
 const logger = require("../helpers/logger");
 class ModuleService extends BaseService {
-
     constructor() {
         super(moduleRepository);
     }
-
     // Create a new module
     async createModule(data) {
         logger.info(`Creating module: ${data.name}`);
@@ -19,5 +17,4 @@ class ModuleService extends BaseService {
         return this.create(data);
     }
 }
-
 module.exports = new ModuleService();

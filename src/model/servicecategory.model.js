@@ -2,29 +2,38 @@ module.exports = (sequelize, DataTypes) => {
     const ServiceCategory = sequelize.define(
         "ServiceCategory",
         {
-            categoryid: {
+            id: {
                 type: DataTypes.INTEGER,
-                autoIncrement: true,
                 primaryKey: true,
+                autoIncrement: true
             },
-            categoryname: {
+            name: {
                 type: DataTypes.STRING(100),
                 allowNull: false,
-                unique: true,
+                unique: true
             },
+            code: {
+                type: DataTypes.STRING(100),
+                allowNull: false,
+                unique: true
+            },
+            color: {
+                type: DataTypes.STRING(30)
+            },
+            displayOrder: {
+                type: DataTypes.INTEGER,
+                defaultValue: 1
+            },
+            isActive: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: true
+            }
         },
         {
             tableName: "service_categories",
             timestamps: true,
+            paranoid: true
         }
     );
-
-    ServiceCategory.associate = (models) => {
-        ServiceCategory.hasMany(models.Service, {
-            foreignKey: "categoryid",
-            as: "services",
-        });
-    };
-
     return ServiceCategory;
 };

@@ -4,8 +4,8 @@ module.exports = (sequelize, DataTypes) => {
         {
             id: {
                 type: DataTypes.INTEGER,
-                autoIncrement: true,
-                primaryKey: true
+                primaryKey: true,
+                autoIncrement: true
             },
             name: {
                 type: DataTypes.STRING(100),
@@ -13,16 +13,15 @@ module.exports = (sequelize, DataTypes) => {
                 unique: true
             },
             code: {
-                type: DataTypes.STRING(50),
+                type: DataTypes.STRING(100),
                 allowNull: false,
                 unique: true
             },
             color: {
-                type: DataTypes.STRING(20)
+                type: DataTypes.STRING(30)
             },
-            sequence: {
-                type: DataTypes.INTEGER,
-                defaultValue: 1
+            description: {
+                type: DataTypes.STRING(255)
             },
             isDefault: {
                 type: DataTypes.BOOLEAN,
@@ -32,18 +31,13 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.BOOLEAN,
                 defaultValue: false
             },
-            description: {
-                type: DataTypes.STRING(255)
+            displayOrder: {
+                type: DataTypes.INTEGER,
+                defaultValue: 1
             },
             isActive: {
                 type: DataTypes.BOOLEAN,
                 defaultValue: true
-            },
-            createdBy: {
-                type: DataTypes.INTEGER
-            },
-            updatedBy: {
-                type: DataTypes.INTEGER
             }
         },
         {

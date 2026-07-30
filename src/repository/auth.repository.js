@@ -1,7 +1,5 @@
 const { User, Role, Permission, RefreshToken, Module } = require("../model");
-
 class AuthRepository {
-
     async login(email) {
         return await User.findOne({
             where: { email },
@@ -25,7 +23,6 @@ class AuthRepository {
             ]
         });
     }
-
     async findRefreshToken(token) {
         return await RefreshToken.findOne({
             where: {
@@ -33,9 +30,7 @@ class AuthRepository {
                 isRevoked: false
             }
         });
-
     }
-
     async findUserById(id) {
         return await User.findByPk(id, {
             include: [
@@ -53,9 +48,7 @@ class AuthRepository {
                 }
             ]
         });
-
     }
-
     async revokeRefreshToken(token) {
         return await RefreshToken.update(
             {
@@ -67,26 +60,19 @@ class AuthRepository {
                 }
             }
         );
-
     }
-
     async revokeAllRefreshTokens(userId) {
         return await RefreshToken.update(
             { isRevoked: true, lastUsedAt: new Date() },
             { where: { userId } }
         );
     }
-
     async findByEmail(email) {
-
         return await User.findOne({
             where: { email }
         });
-
     }
-
     async updatePassword(userId, password) {
-
         return await User.update(
             {
                 password
@@ -98,7 +84,6 @@ class AuthRepository {
             }
         );
     }
-
     async getProfile(userId) {
         return await User.findByPk(userId, {
             attributes: {
@@ -130,7 +115,6 @@ class AuthRepository {
             ]
         });
     }
-
     async updateProfile(userId, data) {
         return await User.update(
             data,
@@ -141,7 +125,6 @@ class AuthRepository {
             }
         );
     }
-
     async findByphone(phone, userId) {
         const { Op } = require("sequelize");
         return await User.findOne({
@@ -153,7 +136,6 @@ class AuthRepository {
             }
         });
     }
-
     async getSessions(userId) {
         return await RefreshToken.findAll({
             where: { userId, isRevoked: false },
@@ -170,7 +152,6 @@ class AuthRepository {
             order: [["createdAt", "DESC"]]
         });
     }
-
     async removeSession(userId, sessionId) {
         const session = await RefreshToken.findOne({
             where: { id: sessionId, userId, isRevoked: false }
@@ -182,7 +163,6 @@ class AuthRepository {
         await session.save();
         return true;
     }
-
     async getUserPermissions(userId) {
         return await User.findByPk(userId, {
             attributes: [
@@ -230,13 +210,10 @@ class AuthRepository {
                     ]
                 }
             ]
-
         });
     }
-
     async createRefreshToken(data) {
         return await RefreshToken.create(data);
     }
 }
-
 module.exports = new AuthRepository();

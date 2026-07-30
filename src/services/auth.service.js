@@ -7,9 +7,7 @@ const { generateAccessToken, generateRefreshToken } = require("../helpers/jwt");
 const { RefreshToken } = require("../model");
 const refreshTokenService = require("./refreshToken.service");
 const logger = require("../helpers/logger");
-
 class AuthService {
-
     // Register a new user
     async register(data) {
         logger.info(`Registering new user with email: ${data.email}`);
@@ -21,10 +19,8 @@ class AuthService {
                 logger.warn(`User registration failed for email: ${data.email}`);
                 throw new Error("Email already exists.");
             }
-
             // Encrypt password
             const hashedPassword = await bcrypt.hash(data.password, 10);
-
             // Create user
             const user = await User.create(
                 {
@@ -37,7 +33,6 @@ class AuthService {
                 },
                 { transaction }
             );
-
             logger.info(`User created successfully: ${user.email}`);
             // Assign Roles
             if (Array.isArray(data.roleIds) && data.roleIds.length > 0) {
@@ -45,7 +40,6 @@ class AuthService {
                     userId: user.id,
                     roleId
                 }));
-
                 await UserRole.bulkCreate(userRoles, {
                     transaction
                 });
@@ -57,9 +51,7 @@ class AuthService {
             logger.error(`Error during user registration: ${error.message}`);
             throw error;
         }
-
     }
-
     // Login a user and generate tokens
     async login(data, sessionInfo) {
         logger.info(`Attempting login for email: ${data.email}`);
@@ -84,25 +76,21 @@ class AuthService {
             user
         };
     }
-
     // Refresh the access token using a valid refresh token
     async refreshToken(refreshToken) {
         logger.info("Refreshing access token.");
         return await refreshTokenService.refreshToken(refreshToken);
     }
-
     //  Logout a user by revoking the refresh token
     async logout(refreshToken) {
         logger.info("Logging out user.");
         return await refreshTokenService.logout(refreshToken);
     }
-
     // Logout a user from all devices by revoking all refresh tokens
     async logoutAll(userId) {
         logger.info("Logging out all sessions for user.");
         return await refreshTokenService.logoutAll(userId);
     }
-
     // Change the password for a user
     async changePassword(userId, data) {
         logger.info(`Changing password for user ID: ${userId}`);
@@ -138,13 +126,11 @@ class AuthService {
             user.id,
             hashedPassword
         );
-
         logger.info(`Password updated for user ID: ${userId}`);
         logger.info(`Revoking all refresh tokens for user ID: ${userId}`);
         await authRepository.revokeAllRefreshTokens(user.id);
         return true;
     }
-
     // Get user profile
     async getProfile(userId) {
         logger.info(`Fetching profile for user ID: ${userId}`);
@@ -155,9 +141,7 @@ class AuthService {
         }
         logger.info(`Profile fetched successfully for user ID: ${userId}`);
         return user;
-
     }
-
     // Update user profile
     async updateProfile(userId, data) {
         const user = await authRepository.findUserById(userId);
@@ -177,7 +161,6 @@ class AuthService {
                 throw new Error("Email already exists.");
             }
         }
-
         // Check duplicate phone
         if (data.phone && data.phone !== user.phone) {
             logger.info(`Checking if phone number exists for user ID: ${userId}`);
@@ -191,7 +174,6 @@ class AuthService {
                 throw new Error("phone number already exists.");
             }
         }
-
         await authRepository.updateProfile(userId, {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -199,18 +181,14 @@ class AuthService {
             phone: data.phone,
             profileImage: data.profileImage
         });
-
         logger.info(`Profile updated successfully for user ID: ${userId}`);
         return await authRepository.getProfile(userId);
-
     }
-
     // Get all active sessions for a user
     async getSessions(userId) {
         logger.info(`Fetching active sessions for user ID: ${userId}`);
         return await authRepository.getSessions(userId);
     }
-
     // Remove a specific session for a user
     async removeSession(userId, sessionId) {
         logger.info(`Removing session ID: ${sessionId} for user ID: ${userId}`);
@@ -219,7 +197,6 @@ class AuthService {
             sessionId
         );
     }
-
     // Get user permissions based on roles
     async getUserPermissions(userId) {
         logger.info(`Fetching permissions for user ID: ${userId}`);
@@ -246,5 +223,4 @@ class AuthService {
         };
     }
 }
-
 module.exports = new AuthService();

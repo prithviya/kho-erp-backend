@@ -32,10 +32,14 @@ db.Permission = require('./permission.model')(sequelize, DataTypes);
 db.RolePermission = require('./rolePermission.model')(sequelize, DataTypes);
 db.Module = require('./module.model')(sequelize, DataTypes);
 db.RefreshToken = require("./refreshToken.model")(sequelize, DataTypes);
-db.PasswordResetToken = require("./passwordResetToken.model")(sequelize, DataTypes);
+db.PasswordResetToken = require("./passwordResetToken.model")(sequelize, DataTypes); 
 db.LeadSource = require("./leadSource.model")(sequelize, DataTypes);
 db.LeadStatus = require("./leadStatus.model")(sequelize, DataTypes);
-db.LeadPriority = require("./leadPriority.model")(sequelize, DataTypes);
+db.Lead = require("./lead.model")(sequelize, DataTypes);
+db.LeadService = require("./leadService.model")(sequelize, DataTypes);
+db.LeadHistory = require("./leadHistory.model")(sequelize, DataTypes);
+db.ServiceCategory = require("./serviceCategory.model")(sequelize, DataTypes);
+db.Service = require("./service.model")(sequelize, DataTypes);
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",
     as: "passwordResetTokens"
@@ -81,6 +85,62 @@ db.Module.hasMany(db.Permission, {
 });
 db.Permission.belongsTo(db.Module, {
     foreignKey: "moduleId"
+});
+db.Lead.belongsTo(db.LeadSource,{
+    foreignKey:"leadSourceId",
+    as:"leadSource"
+});
+db.LeadSource.hasMany(db.Lead,{
+    foreignKey:"leadSourceId",
+    as:"leads"
+});
+db.Lead.belongsTo(db.LeadStatus,{
+    foreignKey:"leadStatusId",
+    as:"leadStatus"
+});
+db.LeadStatus.hasMany(db.Lead,{
+    foreignKey:"leadStatusId",
+    as:"leads"
+});
+db.Lead.belongsTo(db.User,{
+    foreignKey:"assignedTo",
+    as:"assignedUser"
+});
+db.User.hasMany(db.Lead,{
+    foreignKey:"assignedTo",
+    as:"assignedLeads"
+});
+db.Lead.hasMany(db.LeadHistory,{
+    foreignKey:"leadId",
+    as:"history"
+});
+db.LeadHistory.belongsTo(db.Lead,{
+    foreignKey:"leadId",
+    as:"lead"
+});
+db.LeadHistory.belongsTo(db.User,{
+    foreignKey:"changedBy",
+    as:"changedUser"
+});
+db.ServiceCategory.hasMany(db.Service,{
+    foreignKey:"serviceCategoryId",
+    as:"services"
+});
+db.Service.belongsTo(db.ServiceCategory,{
+    foreignKey:"serviceCategoryId",
+    as:"category"
+});
+db.Lead.belongsToMany(db.Service,{
+    through:db.LeadService,
+    foreignKey:"leadId",
+    otherKey:"serviceId",
+    as:"services"
+});
+db.Service.belongsToMany(db.Lead,{
+    through:db.LeadService,
+    foreignKey:"serviceId",
+    otherKey:"leadId",
+    as:"leads"
 });
 // SEQUELIZE
 db.sequelize = sequelize;

@@ -1,5 +1,4 @@
 const { UserRole, Role } = require("../model");
-
 class UserRoleRepository {
     async assignRoles(userId, roleIds) {
         const records = roleIds.map(roleId => ({
@@ -8,7 +7,6 @@ class UserRoleRepository {
         }));
         return await UserRole.bulkCreate(records);
     }
-
     async getRoles(userId) {
         return await Role.findAll({
             include: [
@@ -25,7 +23,6 @@ class UserRoleRepository {
             ]
         });
     }
-
     async findUserRole(userId, roleId) {
         return await UserRole.findOne({
             where: {
@@ -33,7 +30,6 @@ class UserRoleRepository {
             }
         });
     }
-
     async removeRole(userId, roleId) {
         return await UserRole.destroy({
             where: {
@@ -42,12 +38,10 @@ class UserRoleRepository {
             }
         });
     }
-
     async removeAllRoles(userId) {
         return await UserRole.destroy({
             where: { userId }
         });
     }
 }
-
 module.exports = new UserRoleRepository();
