@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "8526ec27-4e5c-4bcc-b382-8a9e185f357e",
+    "_postman_id": "adf42aca-adc6-4cbd-9962-2e15b746b262",
     "name": "ERP System Backend APIs",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "12112172",
-    "_collection_link": "https://go.postman.co/collection/12112172-8526ec27-4e5c-4bcc-b382-8a9e185f357e?source=collection_link"
+    "_exporter_id": "48192384",
+    "_collection_link": "https://go.postman.co/collection/48192384-adf42aca-adc6-4cbd-9962-2e15b746b262?source=collection_link"
   },
   "item": [
     {
@@ -991,7 +991,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"serviceCategoryId\": 1,\r\n    \"name\": \"Website\",\r\n    \"code\": \"WEBSITE\",\r\n    \"displayOrder\": 1,\r\n    \"isActive\": true\r\n}",
+              "raw": "{\r\n    \"serviceCategoryId\": 1,\r\n    \"name\": \"Web Apps\",\r\n    \"code\": \"WEB APPS\",\r\n    \"displayOrder\": 1,\r\n    \"isActive\": true\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1045,24 +1045,19 @@
   ],
   "variable": [
     {
-      "key": "supabase_service_role_api_key_0xfe",
-      "secret": true
+      "key": "supabase_service_role_api_key_0xfe"
     },
     {
-      "key": "supabase_service_role_api_key_0rf2",
-      "secret": true
+      "key": "supabase_service_role_api_key_0rf2"
     },
     {
-      "key": "supabase_service_role_api_key_0to6",
-      "secret": true
+      "key": "supabase_service_role_api_key_0to6"
     },
     {
-      "key": "supabase_service_role_api_key_10je",
-      "secret": true
+      "key": "supabase_service_role_api_key_10je"
     },
     {
-      "key": "json_web_token_1ci1",
-      "secret": true
+      "key": "json_web_token_1ci1"
     }
   ]
 }
