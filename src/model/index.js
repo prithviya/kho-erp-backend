@@ -40,6 +40,9 @@ db.LeadService = require("./leadService.model")(sequelize, DataTypes);
 db.LeadHistory = require("./leadHistory.model")(sequelize, DataTypes);
 db.ServiceCategory = require("./serviceCategory.model")(sequelize, DataTypes);
 db.Service = require("./service.model")(sequelize, DataTypes);
+db.ProjectOnboard = require("./projectOnboard.model")(sequelize, DataTypes);
+db.ProjectAssignment = require("./projectAssignment.model")(sequelize, DataTypes);
+db.Employee = require("./employee.model")(sequelize, DataTypes);
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",
     as: "passwordResetTokens"
@@ -141,6 +144,54 @@ db.Service.belongsToMany(db.Lead,{
     foreignKey:"serviceId",
     otherKey:"leadId",
     as:"leads"
+});
+db.ProjectOnboard.belongsTo(db.Lead, {
+    foreignKey: "leadId",
+    as: "lead"
+});
+db.Lead.hasMany(db.ProjectOnboard, {
+    foreignKey: "leadId",
+    as: "projects"
+});
+db.ProjectOnboard.belongsTo(db.User, {
+    foreignKey: "createdBy",
+    as: "creator"
+});
+db.User.hasMany(db.ProjectOnboard, {
+    foreignKey: "createdBy",
+    as: "createdProjects"
+});
+db.ProjectOnboard.hasMany(db.ProjectAssignment, {
+    foreignKey: "projectOnboardId",
+    as: "assignments"
+});
+db.ProjectAssignment.belongsTo(db.ProjectOnboard, {
+    foreignKey: "projectOnboardId",
+    as: "project"
+});
+db.ProjectAssignment.belongsTo(db.User, {
+    foreignKey: "assignedToId",
+    as: "assignee"
+});
+db.User.hasMany(db.ProjectAssignment, {
+    foreignKey: "assignedToId",
+    as: "projectAssignments"
+});
+db.ProjectAssignment.belongsTo(db.User, {
+    foreignKey: "reportingHeadId",
+    as: "reportingHead"
+});
+db.ProjectAssignment.belongsTo(db.User, {
+    foreignKey: "assignedBy",
+    as: "assignedByUser"
+});
+db.Employee.belongsTo(db.User, {
+    foreignKey: "createdBy",
+    as: "creator"
+});
+db.User.hasMany(db.Employee, {
+    foreignKey: "createdBy",
+    as: "createdEmployees"
 });
 // SEQUELIZE
 db.sequelize = sequelize;

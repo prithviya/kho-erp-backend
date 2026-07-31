@@ -13,8 +13,21 @@ exports.getLeadById = asyncHandler(async (req, res) => {
     const lead = await leadService.getById(req.params.id);
     return ApiResponse.success(res, LEAD.FETCHED, lead);
 });
-
+ 
 exports.createLead = asyncHandler(async (req, res) => {
     const lead = await leadService.createLead(req.body, req.user.id);
     return ApiResponse.created(res, LEAD.CREATED, lead);
+});
+
+exports.updateLead = asyncHandler(async (req, res) => {
+    const lead = await leadService.updateLead(req.params.id, req.body, req.user.id);
+    return ApiResponse.success(res, LEAD.UPDATED, lead);
+});
+
+exports.deleteLead = asyncHandler(async (req, res) => {
+    const deleted = await leadService.deleteLead(req.params.id);
+    if (!deleted) {
+        return ApiResponse.notFound(res, LEAD.NOT_FOUND);
+    }
+    return ApiResponse.success(res, LEAD.DELETED);
 });

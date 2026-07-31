@@ -10,4 +10,7 @@ router.use("/lead-statuses", require("./leadStatus.routes"));
 router.use("/services", require("./service.routes"));
 router.use("/service-categories", require("./serviceCategory.routes"));
 router.use("/lead",require("./lead.routes"))
+router.use("/project-onboards", require("./projectOnboard.routes"));
+router.use("/dashboard", require("./dashboard.routes"));
+router.use("/employees", require("./employee.routes"));
 module.exports = router; 

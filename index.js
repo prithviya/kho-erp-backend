@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
@@ -28,6 +29,7 @@ app.use(morgan("dev"));
 /**
  * Body Parser
  */
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 /**
@@ -72,6 +74,10 @@ app.get("/", (req, res, next) => {
  * Serve React Build (Only if build folder exists)
  */
 const buildPath = path.join(__dirname, "build");
+const uploadsPath = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "uploads"));
+if (fs.existsSync(uploadsPath)) {
+    app.use("/uploads", express.static(uploadsPath));
+}
 if (fs.existsSync(buildPath)) {
     logger.info("✅ React build detected");
     app.use(express.static(buildPath));

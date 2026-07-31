@@ -48,5 +48,55 @@ class LeadService {
             throw error;
         }
     }
+
+    async updateLead(id, data, userId) {
+        const transaction = await sequelize.transaction();
+        try {
+            const lead = await Lead.findByPk(id, { transaction });
+            if (!lead) throw new Error("Lead not found.");
+            // Update Lead
+            await lead.update({
+                companyName: data.companyName,
+                contactPerson: data.contactPerson,
+                phone: data.phone,
+                email: data.email,
+                requirement: data.requirement,
+                budget: data.budget,
+                leadSourceId: data.leadSourceId,
+                leadStatusId: data.leadStatusId,
+                assignedTo: data.assignedTo,
+                referralName: data.referralName,
+                notes: data.notes,
+                nextFollowupDate: data.nextFollowupDate
+            }, { transaction });
+
+            // Map Services
+            if (data.serviceIds?.length > 0) {
+                await lead.setServices(data.serviceIds, {
+                    transaction
+                });
+            }
+
+            // Lead History
+            await LeadHistory.create({
+                leadId: lead.id,
+                oldStatusId: lead._previousDataValues.leadStatusId,
+                newStatusId: data.leadStatusId,
+                notes: "Lead Updated",
+                changedBy: userId
+            }, { transaction });
+
+            await transaction.commit();
+            return await leadRepository.getById(lead.id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    async deleteLead(id) {
+        return await leadRepository.deleteLead(id);
+    }
+
 }
 module.exports = new LeadService();

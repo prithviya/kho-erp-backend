@@ -5,6 +5,31 @@ const logger = require("../helpers/logger");
 const passwordService = require("../services/password.service");
 const UAParser = require("ua-parser-js");
 
+const ACCESS_COOKIE_NAME = "erp_access_token";
+const REFRESH_COOKIE_NAME = "erp_refresh_token";
+
+function getCookieOptions(maxAge) {
+    const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+
+    return {
+        httpOnly: true,
+        secure,
+        sameSite: process.env.COOKIE_SAME_SITE || "Lax",
+        path: "/",
+        maxAge,
+    };
+}
+
+function setAuthCookies(res, accessToken, refreshToken) {
+    res.cookie(ACCESS_COOKIE_NAME, accessToken, getCookieOptions(24 * 60 * 60 * 1000));
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+}
+
+function clearAuthCookies(res) {
+    res.clearCookie(ACCESS_COOKIE_NAME, getCookieOptions(24 * 60 * 60 * 1000));
+    res.clearCookie(REFRESH_COOKIE_NAME, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+}
+
 exports.register = asyncHandler(async (req, res) => {
     logger.info(`Registering user: ${req.body.username}`);
     const user = await authService.register(req.body);
@@ -26,30 +51,37 @@ exports.login = asyncHandler(async (req, res) => {
     };
     logger.info(`Logging in user: ${req.body.email} from IP: ${sessionInfo.ipAddress}`);
     const result = await authService.login(req.body, sessionInfo);
+    setAuthCookies(res, result.accessToken, result.refreshToken);
     logger.info(`User logged in: ${result.user.email}`);
     return ApiResponse.success(
         res,
         "Login successful.",
-        result
+        {
+            user: result.user
+        }
     );
 });
 
 exports.refreshToken = asyncHandler(async (req, res) => {
     logger.info(`Refreshing token for user`);
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body.refreshToken;
     const result = await authService.refreshToken(
-        req.body.refreshToken
+        refreshToken
     );
+    setAuthCookies(res, result.accessToken, result.refreshToken);
     logger.info(`Access token generated for user `);
     return ApiResponse.success(
         res,
         "Access token generated successfully.",
-        result
+        null
     );
 });
 
 exports.logout = asyncHandler(async (req, res) => {
     logger.info(`Logging out user: ${req.user.email}`);
-    await authService.logout(req.body.refreshToken);
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body.refreshToken;
+    await authService.logout(refreshToken);
+    clearAuthCookies(res);
     logger.info(`User logged out: ${req.user.email}`);
     return ApiResponse.success(
         res,
@@ -60,6 +92,7 @@ exports.logout = asyncHandler(async (req, res) => {
 exports.logoutAll = asyncHandler(async (req, res) => {
     logger.info(`Logging out user from all devices: ${req.user.email}`);
     await authService.logoutAll(req.user.id);
+    clearAuthCookies(res);
     logger.info(`User logged out from all devices: ${req.user.email}`);
     return ApiResponse.success(
         res,
@@ -69,21 +102,21 @@ exports.logoutAll = asyncHandler(async (req, res) => {
 
 exports.forgotPassword = asyncHandler(async (req, res) => {
     logger.info(`Initiating forgot password process for email: ${req.body.email}`);
-    const result = await passwordService.forgotPassword(
+    await passwordService.forgotPassword(
         req.body.email
     );
     logger.info(`Password reset link sent to email: ${req.body.email}`);
     return ApiResponse.success(
         res,
-        "Password reset link sent successfully.",
-        result
+        "If the email exists, password reset instructions have been sent.",
+        null
     );
 });
 
 exports.resetPassword = asyncHandler(async (req, res) => {
-    logger.info(`Resetting password for token: ${req.body.token}`);
+    logger.info("Resetting password using password reset flow.");
     await passwordService.resetPassword(req.body);
-    logger.info(`Password reset successfully for token: ${req.body.token}`);
+    logger.info("Password reset completed successfully.");
     return ApiResponse.success(
         res,
         "Password reset successfully."

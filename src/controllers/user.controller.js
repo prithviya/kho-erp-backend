@@ -1,49 +1,61 @@
 const service = require("../services/user.service");
-const { createUserValidation, } = require("../validation/user.validation");
+const {
+  createUserValidation,
+  updateUserValidation,
+  updateUserStatusValidation
+} = require("../validation/user.validation");
+const ApiResponse = require("../helpers/apiResponse");
+const asyncHandler = require("../helpers/asyncHandler");
 const logger = require("../helpers/logger");
-const createUser = async (req, res) => {
+
+const createUser = asyncHandler(async (req, res) => {
   logger.info("Creating user.");
-  try {
-    const { error } = createUserValidation.validate(req.body);
-    if (error) {
-      logger.warn(`Validation error: ${error.details[0].message}`);
-      return res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-    }
-    const user = await service.createUser(req.body);
-    logger.info(`User created: ${user.name}`);
-    res.status(201).json({
-      success: true,
-      message: "User Created Successfully",
-      data: user,
-    });
-  } catch (err) {
-    logger.error(`Error creating user: ${err.message}`);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+  const { error } = createUserValidation.validate(req.body);
+  if (error) {
+    return ApiResponse.error(res, error.details[0].message, null, 400);
   }
-};
-const getUsers = async (req, res) => {
-  logger.info("Fetching all users.");
-  try {
-    const users = await service.getUsers();
-    res.json({
-      success: true,
-      data: users,
-    });
-  } catch (err) {
-    logger.error(`Error fetching users: ${err.message}`);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+
+  const user = await service.createUser(req.body);
+  return ApiResponse.created(res, "User created successfully.", user);
+});
+
+const getUsers = asyncHandler(async (req, res) => {
+  const users = await service.getUsers(req.query.search);
+  return ApiResponse.success(res, "Users fetched successfully.", users);
+});
+
+const updateUser = asyncHandler(async (req, res) => {
+  const { error } = updateUserValidation.validate(req.body);
+  if (error) {
+    return ApiResponse.error(res, error.details[0].message, null, 400);
   }
-};
+
+  const user = await service.updateUser(req.params.id, req.body);
+  return ApiResponse.success(res, "User updated successfully.", user);
+});
+
+const updateUserStatus = asyncHandler(async (req, res) => {
+  const { error } = updateUserStatusValidation.validate(req.body);
+  if (error) {
+    return ApiResponse.error(res, error.details[0].message, null, 400);
+  }
+
+  const user = await service.updateUserStatus(req.params.id, req.body.isActive);
+  return ApiResponse.success(res, "User status updated successfully.", user);
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const deleted = await service.deleteUser(req.params.id);
+  if (!deleted) {
+    return ApiResponse.notFound(res, "User not found.");
+  }
+  return ApiResponse.success(res, "User deleted successfully.");
+});
+
 module.exports = {
   createUser,
   getUsers,
+  updateUser,
+  updateUserStatus,
+  deleteUser
 };

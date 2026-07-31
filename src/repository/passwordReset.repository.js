@@ -6,7 +6,7 @@ class PasswordResetRepository {
         return PasswordResetToken.create(data);
     }
     findByToken(token) {
-        logger.info(`Finding password reset token: ${token}`);
+        logger.info("Finding password reset token by stored hash.");
         return PasswordResetToken.findOne({
             where: {
                 token,

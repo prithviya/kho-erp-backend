@@ -23,8 +23,15 @@ module.exports = (sequelize, DataTypes) => {
                 unique: true,
                 allowNull: false,
             },
+            username: {
+                type: DataTypes.STRING,
+                unique: true,
+            },
             phone: {
                 type: DataTypes.STRING(20),
+            },
+            employeeRecord: {
+                type: DataTypes.STRING(255),
             },
             password: {
                 type: DataTypes.STRING,
