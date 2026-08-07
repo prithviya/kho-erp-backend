@@ -43,6 +43,7 @@ db.Service = require("./service.model")(sequelize, DataTypes);
 db.ProjectOnboard = require("./projectOnboard.model")(sequelize, DataTypes);
 db.ProjectAssignment = require("./projectAssignment.model")(sequelize, DataTypes);
 db.Employee = require("./employee.model")(sequelize, DataTypes);
+db.Department = require("./department.model")(sequelize, DataTypes);
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",
     as: "passwordResetTokens"
