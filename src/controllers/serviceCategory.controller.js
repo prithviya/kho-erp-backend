@@ -40,9 +40,9 @@ exports.delete = asyncHandler(async (req, res) => {
     await serviceCategoryService.delete(req.params.id);
     return ApiResponse.success(
         res,
-        "Service Category deleted successfully."
-    );
-});
+            "Service Category deleted successfully."
+        );
+    });
 exports.getWithServices = asyncHandler(async (req, res) => {
     const data = await serviceCategoryService.getWithServices();
     return ApiResponse.success(
