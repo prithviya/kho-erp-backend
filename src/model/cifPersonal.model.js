@@ -59,11 +59,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(255),
                 allowNull: true
             },
-            appiledPosition: {
-                type: DataTypes.STRING(100),
+            appliedPosition: {
+                type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "Openings",
+                    model: "openings",
                     key: "jobid"
                 }
             }

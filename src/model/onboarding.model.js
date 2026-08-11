@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cifPersonals",
+                    model: "cif_personals",
                     key: "cifid"
                 }
             },
@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "onboardinfo",
+                    model: "onboard_info",
                     key: "onboardinfoid"
                 }
             },
@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull:  false,
                 references: {
-                    model: "onboardingHealth",
+                    model: "onboarding_health",
                     key: "hid"
                 }
             },
@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "onboardingDocuments",
+                    model: "onboarding_documents",
                     key: "did"
                 }
             },
@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "officeTours",
+                    model: "office_tours",
                     key: "otid"
                 }
             },
@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "onboardInduction",
+                    model: "inductions",
                     key:"iid"
                 }
             },
@@ -59,7 +59,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "Equipment",
+                    model: "onboarding_equipments",
                     key: "eqid"
                 }
             }

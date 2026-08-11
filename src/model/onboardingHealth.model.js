@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cifPersonals",
+                    model: "cif_personals",
                     key: "cifid",
                 },
             },
@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "onboardinfo",
+                    model: "onboard_info",
                     key: "onboardinfoid",
                 },
             },
@@ -59,7 +59,7 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         {
-            tableName: "onboardingHealth",
+            tableName: "onboarding_health",
             timestamps: true,
             paranoid: true,
         }

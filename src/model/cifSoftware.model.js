@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cifPersonals",
+                    model: "cif_personals",
                     key: "cifid"
                 }
             },
@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         {
-            tableName: "cifSoftwares",
+            tableName: "cif_softwares",
             timestamps: true,
             paranoid: true
         }

@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cifPersonals",
+                    model: "cif_personals",
                     key: "cifid",
                 },
             },
@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "onboardinfo",
+                    model: "onboard_info",
                     key: "onboardinfoid",
                 },
             },
@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         {
-            tableName: "onboardingBanks",
+            tableName: "onboarding_banks",
             timestamps: true,
             paranoid: true,
         }

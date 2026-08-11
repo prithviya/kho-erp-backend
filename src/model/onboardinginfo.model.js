@@ -9,14 +9,6 @@ module.exports= (sequelize, DataTypes) => {
                 autoIncrement: true,
                 primaryKey: true
             },
-            employeeid: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                references: {
-                    model: "onboardings",
-                    key: "onboardingid"
-                }   
-            },
             officialemail: {    
                 type: DataTypes.STRING,
                 unique: true,
@@ -85,7 +77,7 @@ module.exports= (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model:  "cifExperience",
+                    model:  "cif_experience",
                     key: "eid"
                 }
             },
@@ -93,14 +85,14 @@ module.exports= (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cifAcademic",
+                    model: "cif_academic",
                     key: "cifAcademic"
                 }       
             },
             
         },
         {
-            tablename: "onboardinfo",
+            tablename: "onboard_info",
             timestamps: true,
             paranoid: true
         }
