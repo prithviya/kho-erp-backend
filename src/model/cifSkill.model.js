@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false
             },
             year:{
-                type: DataTypes.Date,
+                type: DataTypes.DATE,
                 allowNull: false
             },
             provider: {

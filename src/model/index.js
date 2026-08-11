@@ -41,13 +41,15 @@ db.LeadHistory = require("./leadHistory.model")(sequelize, DataTypes);
 db.ServiceCategory = require("./serviceCategory.model")(sequelize, DataTypes);
 db.Service = require("./service.model")(sequelize, DataTypes);
 db.Department = require("./department.model")(sequelize, DataTypes);
+
 db.CifAcademic = require("./cifAcademic.model")(sequelize, DataTypes);
 db.CifExperience = require ("./cifExperience.model")(sequelize, DataTypes);
 db.CifLanguage = require ("./cifLanguage.model")(sequelize, DataTypes);
 db.CifPersonal = require ("./cifPersonal.model")(sequelize, DataTypes);
 db.CifReference = require ("./cifReference.model")(sequelize, DataTypes);
 db.CifSkill = require("./cifSkill.model")(sequelize, DataTypes);
-db.CifSoftware = require ("./cifSkill.model")(sequelize, DataTypes);
+db.CifSoftware = require ("./cifSoftware.model")(sequelize, DataTypes);
+
 db.OnboardEquipment = require ("./onboardEquipment.model")(sequelize, DataTypes);
 db.OnboardInduction = require ("./onboardInduction.model")(sequelize, DataTypes);
 db.Onboarding = require ("./onboarding.model")(sequelize, DataTypes);
@@ -56,11 +58,13 @@ db.OnboardingDocument = require ("./onboardingDocument.model")(sequelize, DataTy
 db.OnboardingHealth = require ("./onboardingHealth.model")(sequelize, DataTypes);
 db.OnboardingInfo = require ("./onboardinginfo.model")(sequelize, DataTypes);
 db.OnboardingOffice = require ("./onboardingOfficeTour")(sequelize, DataTypes);
+
 db.Opening =require("./opening.model")(sequelize, DataTypes);
 db.Recruitment = require("./recruitment.model")(sequelize, DataTypes);
 db.ProjectOnboard = require("./projectOnboard.model")(sequelize, DataTypes);
 db.ProjectAssignment = require("./projectAssignment.model")(sequelize, DataTypes);
 db.Employee = require("./employee.model")(sequelize, DataTypes);
+
 db.User.hasMany(db.PasswordResetToken, {
     foreignKey: "userId",
     as: "passwordResetTokens"

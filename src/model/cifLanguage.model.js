@@ -29,10 +29,10 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         {
-            tableName: "cifLanguages",
+            tableName: "cif_languages",
             timestamps: true,
             paranoid: true
-        }
+        } 
     );
     return cifLanguage;
 }
