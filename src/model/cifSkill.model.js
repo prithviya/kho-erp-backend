@@ -1,4 +1,4 @@
-const { ta } = require("zod/locales")
+// const { ta } = require("zod/locales")
 
 module.exports = (sequelize, DataTypes) => {
     const CifSkill = sequelize.define(

@@ -23,47 +23,6 @@ module.exports = (sequelize, DataTypes) => {
                     key: "onboardinfoid"
                 }
             },
-            hid: {
-                type: DataTypes.INTEGER,
-                allowNull:  false,
-                references: {
-                    model: "onboarding_health",
-                    key: "hid"
-                }
-            },
-            did: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                references: {
-                    model: "onboarding_documents",
-                    key: "did"
-                }
-            },
-            otid: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                references: {
-                    model: "office_tours",
-                    key: "otid"
-                }
-            },
-            iid:{
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                references: {
-                    model: "inductions",
-                    key:"iid"
-                }
-            },
-            eqid:{
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                references: {
-                    model: "onboarding_equipments",
-                    key: "eqid"
-                }
-            }
-
         },
         {
             tableName: "onboardings",

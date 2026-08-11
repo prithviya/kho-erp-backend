@@ -12,9 +12,9 @@ class CifPersonalRepository extends BaseRepository {
         });
     }
 
-    async findByPhone(phone) {
+    async findByPhoneNumber(phoneNumber) {
         return await this.model.findOne({
-            where: { phone },
+            where: { phoneNumber },
         });
     }
 
