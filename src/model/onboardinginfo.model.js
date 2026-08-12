@@ -77,7 +77,7 @@ module.exports= (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model:  "cif_experience",
+                    model:  "cif_experiences",
                     key: "eid"
                 }
             },
@@ -85,14 +85,14 @@ module.exports= (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: "cif_academic",
-                    key: "cifAcademic"
-                }       
+                    model: "cif_academics",
+                    key: "academicid"
+                }
             },
             
         },
         {
-            tablename: "onboard_info",
+            tableName: "onboard_info",
             timestamps: true,
             paranoid: true
         }

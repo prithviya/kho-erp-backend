@@ -1,64 +1,29 @@
-const BaseService = require("./base.service");
-const repository = require("../repository/cifSoftware.repository");
+const BaseRepository = require("./base.repository");
+const { CifSoftware } = require("../model");
 
-class CifSoftwareService extends BaseService {
+class CifSoftwareRepository extends BaseRepository {
     constructor() {
-        super(repository);
+        super(CifSoftware);
     }
 
-    async create(data) {
-        if (!data.cifid) {
-            throw new Error("CIF ID is required.");
-        }
-
-        if (!data.tools) {
-            throw new Error("Software tool is required.");
-        }
-
-        if (!data.levels) {
-            throw new Error("Software level is required.");
-        }
-
-        return await super.create(data);
-    }
-
-    async getAll() {
-        return await repository.findAll();
-    }
-
-    async getById(id) {
-        const software = await repository.findById(id);
-
-        if (!software) {
-            throw new Error("Software record not found.");
-        }
-
-        return software;
-    }
-
-    async getByCifId(cifid) {
-        return await repository.findByCifId(cifid);
+    async findByCifId(cifid) {
+        return this.model.findAll({
+            where: { cifid },
+        });
     }
 
     async update(id, data) {
-        const software = await repository.findById(id);
-
-        if (!software) {
-            throw new Error("Software record not found.");
-        }
-
-        return await repository.update(id, data);
+        await this.model.update(data, {
+            where: { softwareid: id },
+        });
+        return this.findById(id);
     }
 
     async delete(id) {
-        const software = await repository.findById(id);
-
-        if (!software) {
-            throw new Error("Software record not found.");
-        }
-
-        return await repository.delete(id);
+        return this.model.destroy({
+            where: { softwareid: id },
+        });
     }
 }
 
-module.exports = new CifSoftwareService();
+module.exports = new CifSoftwareRepository();

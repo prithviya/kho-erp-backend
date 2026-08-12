@@ -22,7 +22,7 @@ router.use("/cif-experiences", require("./cifExperience.routes"));
 router.use("/cif-languages", require("./cifLanguage.routes"));
 router.use("/cif-references", require("./cifReference.routes"));
 router.use("/cif-skills",require("./cifSkill.routes"));
-router.use("/cif-software", require("./cifSoftware.routes"));
+router.use("/cif-software",require("./cifSoftware.routes"));
 
 router.use("/project-onboards", require("./projectOnboard.routes"));
 router.use("/dashboard", require("./dashboard.routes"));

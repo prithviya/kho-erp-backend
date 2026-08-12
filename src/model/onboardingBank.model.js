@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 references: {
                     model: "onboard_info",
-                    key: "onboardinfoid",
+                    key: "onboardinginfoid",
                 },
             },
 
