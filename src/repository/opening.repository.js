@@ -1,20 +1,46 @@
 const BaseRepository = require("./base.repository");
-const { Opening } = require("../model");
+const { Opening, Department } = require("../model");
 
 class OpeningRepository extends BaseRepository {
     constructor() {
         super(Opening);
     }
 
+    async findAll() {
+        return await this.model.findAll({
+            include: [
+                {
+                    model: Department,
+                    as: "department",
+                    attributes: ["id", "name"],
+                },
+            ],
+        });
+    }
+
     async findByCode(code) {
         return await this.model.findOne({
             where: { code },
+            include: [
+                {
+                    model: Department,
+                    as: "department",
+                    attributes: ["id", "name"],
+                },
+            ],
         });
     }
 
     async findByDepartmentId(departmentId) {
         return await this.model.findAll({
             where: { departmentId },
+            include: [
+                {
+                    model: Department,
+                    as: "department",
+                    attributes: ["id", "name"],
+                },
+            ],
         });
     }
 
@@ -23,11 +49,26 @@ class OpeningRepository extends BaseRepository {
             where: {
                 isActive: true,
             },
+            include: [
+                {
+                    model: Department,
+                    as: "department",
+                    attributes: ["id", "name"],
+                },
+            ],
         });
     }
 
     async findById(id) {
-        return await this.model.findByPk(id);
+        return await this.model.findByPk(id, {
+            include: [
+                {
+                    model: Department,
+                    as: "department",
+                    attributes: ["id", "name"],
+                },
+            ],
+        });
     }
 
     async update(id, data) {

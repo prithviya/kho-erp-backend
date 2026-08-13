@@ -475,6 +475,18 @@ db.User.hasMany(db.Employee, {
 });
 
 
+db.Opening.belongsTo(db.Department, {
+    foreignKey: "departmentId",
+    targetKey: "id",
+    as: "department",
+});
+
+db.Department.hasMany(db.Opening, {
+    foreignKey: "departmentId",
+    sourceKey: "id",
+    as: "openings",
+});
+
 /*
 |--------------------------------------------------------------------------
 | SEQUELIZE

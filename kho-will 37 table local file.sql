@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3308
--- Generation Time: Aug 12, 2026 at 07:57 AM
+-- Generation Time: Aug 13, 2026 at 02:25 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,7 +45,8 @@ CREATE TABLE `cif_academics` (
 --
 
 INSERT INTO `cif_academics` (`academicid`, `cifid`, `degree`, `university`, `graduationYear`, `grade`, `city`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-12 05:11:51', '2026-08-12 05:11:51', NULL);
+(2, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-12 05:11:51', '2026-08-12 05:11:51', NULL),
+(3, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-13 11:41:50', '2026-08-13 11:41:50', NULL);
 
 -- --------------------------------------------------------
 
@@ -225,7 +226,12 @@ CREATE TABLE `departments` (
 --
 
 INSERT INTO `departments` (`id`, `name`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'Operations', 1, '2026-08-12 05:10:08', '2026-08-12 05:10:08', NULL);
+(1, 'Operations', 1, '2026-08-12 05:10:08', '2026-08-12 05:10:08', NULL),
+(2, 'Content', 1, '2026-08-13 07:46:47', '2026-08-13 09:57:10', NULL),
+(3, 'designer', 1, '2026-08-13 07:47:42', '2026-08-13 07:48:18', '2026-08-13 07:48:18'),
+(9, 'dd', 1, '2026-08-13 07:55:41', '2026-08-13 07:56:48', '2026-08-13 07:56:48'),
+(34, 'Geetha', 1, '2026-08-13 09:26:07', '2026-08-13 09:47:45', '2026-08-13 09:47:45'),
+(40, 'Digital Marketing', 1, '2026-08-13 10:01:45', '2026-08-13 10:01:57', NULL);
 
 -- --------------------------------------------------------
 
@@ -315,7 +321,8 @@ CREATE TABLE `leads` (
 --
 
 INSERT INTO `leads` (`id`, `companyName`, `contactPerson`, `phone`, `email`, `requirement`, `budget`, `leadSourceId`, `leadStatusId`, `assignedTo`, `referralName`, `notes`, `nextFollowupDate`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 'Morris Flowers Plc', 'Consectetur eius vol', '9638520741', 'dohibomode@mailinator.com', 'Enim ea atque sed la', 12.00, 1, 1, 1, NULL, 'Minus ut ad consequat Corporis consequuntur alias quos proident do sed accusamus dolor libero consectetur distinctio Rerum', '1988-08-20', 1, '2026-08-12 05:29:48', '2026-08-12 05:29:48', NULL);
+(2, 'Morris Flowers Plc', 'Consectetur eius vol', '9638520741', 'dohibomode@mailinator.com', 'Enim ea atque sed la', 12.00, 3, 2, 1, NULL, 'Minus ut ad consequat Corporis consequuntur alias quos proident do sed accusamus dolor libero consectetur distinctio Rerum', '1988-08-20', 1, '2026-08-12 05:29:48', '2026-08-13 08:56:39', NULL),
+(3, 'Gibson Crawford Associates', 'Veniam quibusdam mo', '9876543210', 'deba@mailinator.com', 'Incididunt fuga Et ', 82000.00, 1, 6, 1, NULL, 'Vel dolor non error modi odio expedita excepturi et', '2026-08-17', 1, '2026-08-12 10:42:38', '2026-08-13 07:01:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -338,7 +345,17 @@ CREATE TABLE `lead_history` (
 --
 
 INSERT INTO `lead_history` (`id`, `leadId`, `oldStatusId`, `newStatusId`, `notes`, `changedBy`, `createdAt`) VALUES
-(1, 2, NULL, NULL, 'Lead Created', 1, '2026-08-12 05:29:48');
+(1, 2, NULL, NULL, 'Lead Created', 1, '2026-08-12 05:29:48'),
+(2, 2, 2, 2, 'Lead Updated', 1, '2026-08-12 06:30:04'),
+(3, 3, NULL, NULL, 'Lead Created', 1, '2026-08-12 10:42:38'),
+(4, 3, 3, 3, 'Lead Updated', 1, '2026-08-13 07:00:05'),
+(5, 3, 4, 4, 'Lead Updated', 1, '2026-08-13 07:00:13'),
+(6, 3, 5, 5, 'Lead Updated', 1, '2026-08-13 07:00:18'),
+(7, 3, 5, 5, 'Lead Updated', 1, '2026-08-13 07:00:37'),
+(8, 3, 6, 6, 'Lead Updated', 1, '2026-08-13 07:00:43'),
+(9, 3, 7, 7, 'Lead Updated', 1, '2026-08-13 07:00:50'),
+(10, 3, 6, 6, 'Lead Updated', 1, '2026-08-13 07:01:00'),
+(11, 2, 2, 2, 'Lead Updated', 1, '2026-08-13 08:56:39');
 
 -- --------------------------------------------------------
 
@@ -384,7 +401,9 @@ CREATE TABLE `lead_services` (
 
 INSERT INTO `lead_services` (`leadId`, `serviceId`) VALUES
 (2, 1),
-(2, 2);
+(2, 2),
+(3, 1),
+(3, 3);
 
 -- --------------------------------------------------------
 
@@ -409,7 +428,11 @@ CREATE TABLE `lead_sources` (
 --
 
 INSERT INTO `lead_sources` (`id`, `name`, `code`, `description`, `isActive`, `displayOrder`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'Email Campaign', 'EMAIL_CAMPAIGN', 'Lead generated from Email Campaign.', 1, 10, '2026-08-12 05:09:23', '2026-08-12 05:09:23', NULL);
+(1, 'Email Campaign', 'EMAIL_CAMPAIGN', 'Lead generated from Email Campaign.', 1, 2, '2026-08-12 05:09:23', '2026-08-13 07:03:41', NULL),
+(2, 'Whatsapp', 'WHATSAPP', '', 1, 1, '2026-08-13 07:03:14', '2026-08-13 07:03:14', NULL),
+(3, 'Instagram', 'INSTA', '', 1, 3, '2026-08-13 07:03:56', '2026-08-13 07:04:58', NULL),
+(4, 'Facebook', 'FB', '', 1, 4, '2026-08-13 07:04:48', '2026-08-13 07:05:06', NULL),
+(5, 'LinkedIn', 'LINKEDIN', '', 1, 5, '2026-08-13 07:06:19', '2026-08-13 07:06:19', NULL);
 
 -- --------------------------------------------------------
 
@@ -437,7 +460,13 @@ CREATE TABLE `lead_statuses` (
 --
 
 INSERT INTO `lead_statuses` (`id`, `name`, `code`, `color`, `description`, `isDefault`, `isClosed`, `displayOrder`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'On Hold', 'ON_HOLD', '#FFC107', 'Lead is temporarily on hold and will be revisited later.', 0, 0, 7, 1, '2026-08-12 05:09:30', '2026-08-12 05:09:30', NULL);
+(1, 'On Hold', 'ON_HOLD', '#9e9e9e', 'Lead is temporarily on hold and will be revisited later.', 0, 0, 7, 1, '2026-08-12 05:09:30', '2026-08-13 06:59:01', NULL),
+(2, 'New', 'NEW', '#2563EB', 'A new lead awaiting initial contact.', 1, 0, 1, 1, '2026-08-12 06:29:01', '2026-08-12 06:29:01', NULL),
+(3, 'Contacted', 'CONTACTED', '#eb9824', ' Initial contact has been made with the lead.', 0, 0, 2, 1, '2026-08-13 06:55:28', '2026-08-13 06:55:28', NULL),
+(4, 'Discussion', 'DISCUSSION', '#eb248e', '', 0, 0, 3, 1, '2026-08-13 06:57:10', '2026-08-13 06:57:10', NULL),
+(5, 'Proposal', 'PROPOSAL', '#9124eb', 'A quotation or proposal has been shared with the lead.', 0, 0, 4, 1, '2026-08-13 06:57:32', '2026-08-13 06:57:42', NULL),
+(6, 'Negotiation', 'NEGOTIATION', '#eb5524', '', 0, 0, 1, 1, '2026-08-13 06:58:41', '2026-08-13 07:01:21', NULL),
+(7, 'Converted', 'CONVERTED', '#24eb94', '', 0, 0, 6, 1, '2026-08-13 06:59:36', '2026-08-13 07:01:31', NULL);
 
 -- --------------------------------------------------------
 
@@ -629,7 +658,8 @@ CREATE TABLE `openings` (
 --
 
 INSERT INTO `openings` (`jobid`, `code`, `jobTitle`, `departmentId`, `openingCount`, `requiredSkills`, `minExperience`, `jobDescription`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'DM-001', 'Digital Marketing Executive', 1, 2, 'SEO, Google Ads, Meta Ads', 2, 'Looking for a Digital Marketing Executive.', 1, '2026-08-12 05:10:32', '2026-08-12 05:10:32', NULL);
+(1, 'DM-001', 'Digital Marketing Executive', 1, 2, 'SEO, Google Ads, Meta Ads', 2, 'Looking for a Digital Marketing Executive.', 1, '2026-08-12 05:10:32', '2026-08-12 05:10:32', NULL),
+(2, 'JOB002', 'Ipsum nobis rerum i', 1, 3, 'Sed esse voluptas qu', 5, 'lorem', 1, '2026-08-12 09:48:24', '2026-08-12 09:48:24', NULL);
 
 -- --------------------------------------------------------
 
@@ -761,7 +791,9 @@ INSERT INTO `refresh_tokens` (`id`, `userId`, `token`, `deviceId`, `deviceName`,
 (1, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiaWF0IjoxNzg2NTExMTIzLCJleHAiOjE3ODcxMTU5MjN9.9myqdHiGtFqcWI9EWt7GR1Q41GCwaZ16LoAxuslNSLM', NULL, 'Desktop', NULL, NULL, '::1', NULL, NULL, '2026-08-12 05:05:23', '2026-08-19 05:05:23', 0, '2026-08-12 05:05:23', '2026-08-12 05:05:23'),
 (2, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTExMzQ2LCJleHAiOjE3ODcxMTYxNDZ9.s95y2eYHbWODkWtaDeyG3d6ICnVG4SHu8bMNyA4Kra4', NULL, 'Desktop', NULL, NULL, '::1', NULL, NULL, '2026-08-12 05:09:06', '2026-08-19 05:09:06', 0, '2026-08-12 05:09:06', '2026-08-12 05:09:06'),
 (3, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTEyNTIzLCJleHAiOjE3ODcxMTczMjN9.uSQNzYg6XBOyWg-FrJyiVBWSgyGJJWnGV48rbRIfxWw', NULL, 'Desktop', 'Electron', 'Windows', '::1', NULL, NULL, '2026-08-12 05:28:43', '2026-08-19 05:28:43', 0, '2026-08-12 05:28:43', '2026-08-12 05:28:43'),
-(4, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTEyNTI5LCJleHAiOjE3ODcxMTczMjl9.78p-ktfeoPpkvCI6jHpuBNE87tJmdnefiXDqp5rt1DM', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 05:28:49', '2026-08-19 05:28:49', 0, '2026-08-12 05:28:49', '2026-08-12 05:28:49');
+(4, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTEyNTI5LCJleHAiOjE3ODcxMTczMjl9.78p-ktfeoPpkvCI6jHpuBNE87tJmdnefiXDqp5rt1DM', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 05:28:49', '2026-08-19 05:28:49', 1, '2026-08-12 05:28:49', '2026-08-12 12:24:07'),
+(5, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTE3MzM5LCJleHAiOjE3ODcxMjIxMzl9.agY41oKtOp5K9myiZ08PKXnqXDkTZF1eN9Jw4RpFJRg', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 06:48:59', '2026-08-19 06:48:59', 0, '2026-08-12 06:48:59', '2026-08-12 06:48:59'),
+(6, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTM3ODE1LCJleHAiOjE3ODcxNDI2MTV9.QCty1Ib690DEDDZY_0zDuPcCalRhSJXsdsDEcAtsEqQ', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 12:30:15', '2026-08-19 12:30:15', 0, '2026-08-12 12:30:15', '2026-08-12 12:30:15');
 
 -- --------------------------------------------------------
 
@@ -822,7 +854,10 @@ CREATE TABLE `services` (
 
 INSERT INTO `services` (`id`, `serviceCategoryId`, `name`, `code`, `displayOrder`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
 (1, 1, 'Website', 'SITE', 1, 1, '2026-08-04 07:44:25', '2026-08-04 07:44:25', NULL),
-(2, 1, 'SEO', 'SEO', 2, 1, '2026-08-04 07:44:47', '2026-08-04 07:44:47', NULL);
+(2, 1, 'SEO', 'SEO', 2, 1, '2026-08-04 07:44:47', '2026-08-04 07:44:47', NULL),
+(3, 2, 'Photoshoot', 'PHOTOSHOOT', 1, 1, '2026-08-12 10:41:51', '2026-08-13 05:31:53', NULL),
+(4, 2, 'Videoshoot', 'VIDEOSHOOT', 2, 1, '2026-08-13 05:53:45', '2026-08-13 05:53:45', NULL),
+(5, 1, 'SMM', 'SMM', 3, 1, '2026-08-13 06:52:56', '2026-08-13 06:52:56', NULL);
 
 -- --------------------------------------------------------
 
@@ -847,7 +882,11 @@ CREATE TABLE `service_categories` (
 --
 
 INSERT INTO `service_categories` (`id`, `name`, `code`, `color`, `displayOrder`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'Media', 'MEDIA', '#2563EB', 2, 1, '2026-08-12 05:09:44', '2026-08-12 05:09:44', NULL);
+(1, 'DM', 'DM', '#2563EB', 1, 1, '2026-08-12 05:09:44', '2026-08-12 06:28:33', NULL),
+(2, 'Media', 'MEDIA', '#43cb8c', 2, 1, '2026-08-12 10:40:59', '2026-08-13 05:47:10', NULL),
+(3, 'Operations', 'OP', '#eb24e4', 3, 1, '2026-08-13 05:46:28', '2026-08-13 05:46:36', NULL),
+(4, 'Web development', 'WEB', '#24e7eb', 4, 1, '2026-08-13 05:52:47', '2026-08-13 05:52:47', NULL),
+(5, 'Content', 'CONTENT', '#e9944e', 5, 1, '2026-08-13 05:53:16', '2026-08-13 05:53:16', NULL);
 
 -- --------------------------------------------------------
 
@@ -1204,7 +1243,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `cif_academics`
 --
 ALTER TABLE `cif_academics`
-  MODIFY `academicid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `academicid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `cif_experiences`
@@ -1246,7 +1285,7 @@ ALTER TABLE `cif_softwares`
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `inductions`
@@ -1258,25 +1297,25 @@ ALTER TABLE `inductions`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `lead_history`
 --
 ALTER TABLE `lead_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `lead_sources`
 --
 ALTER TABLE `lead_sources`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `lead_statuses`
 --
 ALTER TABLE `lead_statuses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `modules`
@@ -1330,7 +1369,7 @@ ALTER TABLE `onboard_info`
 -- AUTO_INCREMENT for table `openings`
 --
 ALTER TABLE `openings`
-  MODIFY `jobid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `jobid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `password_reset_tokens`
@@ -1354,7 +1393,7 @@ ALTER TABLE `recruitments`
 -- AUTO_INCREMENT for table `refresh_tokens`
 --
 ALTER TABLE `refresh_tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1366,13 +1405,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `service_categories`
 --
 ALTER TABLE `service_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
