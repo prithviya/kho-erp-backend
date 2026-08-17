@@ -489,6 +489,94 @@ db.Department.hasMany(db.Opening, {
 
 /*
 |--------------------------------------------------------------------------
+| CIF RELATIONSHIPS
+|--------------------------------------------------------------------------
+*/
+
+// Personal -> Academic
+db.CifPersonal.hasMany(db.CifAcademic, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "academics",
+});
+
+db.CifAcademic.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+// Personal -> Experience
+db.CifPersonal.hasMany(db.CifExperience, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "experiences",
+});
+
+db.CifExperience.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+// Personal -> Language
+db.CifPersonal.hasMany(db.CifLanguage, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "languages",
+});
+
+db.CifLanguage.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+// Personal -> Software
+db.CifPersonal.hasMany(db.CifSoftware, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "softwares",
+});
+
+db.CifSoftware.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+// Personal -> Skills
+db.CifPersonal.hasMany(db.CifSkill, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "skills",
+});
+
+db.CifSkill.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+// Personal -> Reference
+db.CifPersonal.hasMany(db.CifReference, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "references",
+});
+
+db.CifReference.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+/*
+|--------------------------------------------------------------------------
 | SEQUELIZE
 |--------------------------------------------------------------------------
 */

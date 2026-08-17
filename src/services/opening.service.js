@@ -67,6 +67,17 @@ class OpeningService extends BaseService {
 
         return await repository.delete(id);
     }
+
+    // ✅ ADD THIS METHOD
+    async updateStatus(id, isActive) {
+        const opening = await repository.findById(id);
+
+        if (!opening) {
+            throw new Error("Opening not found.");
+        }
+
+        return await repository.update(id, { isActive });
+    }
 }
 
 module.exports = new OpeningService();

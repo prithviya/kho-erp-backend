@@ -1,5 +1,7 @@
 const BaseRepository = require("./base.repository");
-const { CifPersonal } = require("../model");
+
+
+const { CifPersonal, CifAcademic, CifExperience, CifLanguage, CifSoftware, CifSkill, CifReference } = require("../model");
 
 class CifPersonalRepository extends BaseRepository {
     constructor() {
@@ -20,6 +22,39 @@ class CifPersonalRepository extends BaseRepository {
 
     async findById(id) {
         return await this.model.findByPk(id);
+    }
+    async findByPersonId(personId) {
+        return await this.model.findOne({
+            where: {
+                cifid: personId,
+            },
+            include: [
+                {
+                    model: CifAcademic,
+                    as: "Academic",
+                },
+                {
+                    model: CifExperience,
+                    as: "Experience",
+                },
+                {
+                    model: CifLanguage,
+                    as: "Language",
+                },
+                {
+                    model: CifSoftware,
+                    as: "Software",
+                },
+                {
+                    model: CifSkill,
+                    as: "Skills",
+                },
+                {
+                    model: CifReference,
+                    as: "reference",
+                },
+            ],
+        });
     }
 }
 

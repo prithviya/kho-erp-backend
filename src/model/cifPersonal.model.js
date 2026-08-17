@@ -66,7 +66,8 @@ module.exports = (sequelize, DataTypes) => {
                     model: "openings",
                     key: "jobid"
                 }
-            }
+            },
+            
         },
         {
             tableName: "cif_personals",
@@ -74,5 +75,6 @@ module.exports = (sequelize, DataTypes) => {
             paranoid: true
         }
     );  
+    
     return CifPersonal;
 };

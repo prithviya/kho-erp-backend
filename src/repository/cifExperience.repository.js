@@ -11,6 +11,7 @@ class CifExperienceRepository extends BaseRepository {
             where: { cifid },
         });
     }
+    
 }
 
 module.exports = new CifExperienceRepository();

@@ -1,9 +1,9 @@
-const opening = require("../services/opening.service");
+const openingService = require("../services/opening.service");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
 
 exports.create = asyncHandler(async (req, res) => {
-    const openingData = await opening.create(req.body);
+    const openingData = await openingService.create(req.body);
 
     return ApiResponse.created(
         res,
@@ -13,7 +13,7 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.getAll = asyncHandler(async (req, res) => {
-    const openings = await opening.getAll();
+    const openings = await openingService.getAll();
 
     return ApiResponse.success(
         res,
@@ -23,7 +23,7 @@ exports.getAll = asyncHandler(async (req, res) => {
 });
 
 exports.getById = asyncHandler(async (req, res) => {
-    const openingData = await opening.getById(req.params.id);
+    const openingData = await openingService.getById(req.params.id);
 
     return ApiResponse.success(
         res,
@@ -33,7 +33,7 @@ exports.getById = asyncHandler(async (req, res) => {
 });
 
 exports.update = asyncHandler(async (req, res) => {
-    const openingData = await opening.update(
+    const openingData = await openingService.update(
         req.params.id,
         req.body
     );
@@ -45,8 +45,22 @@ exports.update = asyncHandler(async (req, res) => {
     );
 });
 
+// ✅ ADD THIS METHOD
+exports.updateStatus = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const openingData = await openingService.updateStatus(id, isActive);
+
+    return ApiResponse.success(
+        res,
+        "Opening status updated successfully.",
+        openingData
+    );
+});
+
 exports.delete = asyncHandler(async (req, res) => {
-    await opening.delete(req.params.id);
+    await openingService.delete(req.params.id);
 
     return ApiResponse.success(
         res,
