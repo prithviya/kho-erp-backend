@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3308
--- Generation Time: Aug 13, 2026 at 02:25 PM
+-- Generation Time: Aug 17, 2026 at 02:39 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,8 +45,8 @@ CREATE TABLE `cif_academics` (
 --
 
 INSERT INTO `cif_academics` (`academicid`, `cifid`, `degree`, `university`, `graduationYear`, `grade`, `city`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-12 05:11:51', '2026-08-12 05:11:51', NULL),
-(3, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-13 11:41:50', '2026-08-13 11:41:50', NULL);
+(1, 1, 'B.E Computer Science', 'Anna University', 2020, 'A', 'Coimbatore', '2026-08-12 05:11:51', '2026-08-12 05:11:51', NULL),
+(2, 2, 'Explicabo Id a dele', 'Sed ex suscipit repr', 2008, 'Minus ex n', 'Qui nobis ullamco Na', '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -74,7 +74,8 @@ CREATE TABLE `cif_experiences` (
 --
 
 INSERT INTO `cif_experiences` (`eid`, `cifid`, `companyName`, `location`, `role`, `startDate`, `endDate`, `totalExperience`, `reasonForLeaving`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 1, 'ABC Technologies', 'Coimbatore', 'Digital Marketing Executive', '2022-01-10', '2024-05-31', 0, 'Career growth', '2026-08-12 05:11:59', '2026-08-12 05:11:59', NULL);
+(1, 1, 'ABC Technologies', 'Coimbatore', 'Digital Marketing Executive', '2022-01-10', '2024-05-31', 0, 'Career growth', '2026-08-12 05:11:59', '2026-08-12 05:11:59', NULL),
+(2, 2, 'Laborum Sint aut er', 'Impedit tempore ma', 'Sed aspernatur delen', '1975-07-14', '1973-10-06', -1.77, NULL, '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -98,7 +99,8 @@ CREATE TABLE `cif_languages` (
 --
 
 INSERT INTO `cif_languages` (`languageid`, `cifid`, `Speak`, `Read`, `Write`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 1, 'basic', 'basic', 'basic', '2026-08-12 05:12:04', '2026-08-12 05:12:04', NULL);
+(1, 1, 'basic', 'basic', 'basic', '2026-08-12 05:12:04', '2026-08-12 05:12:04', NULL),
+(2, 2, 'basic', 'fluent', 'native', '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -131,7 +133,8 @@ CREATE TABLE `cif_personals` (
 --
 
 INSERT INTO `cif_personals` (`cifid`, `fullName`, `email`, `phoneNumber`, `DOB`, `address`, `city`, `state`, `pinCode`, `gender`, `maritalStatus`, `portfolioLink`, `resume`, `appliedPosition`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 'Gokul Kumar', 'gokul@example.com', '9876543210', '1995-05-15', 'Coimbatore', 'Coimbatore', 'Tamil Nadu', '641001', 'Male', 'Married', 'https://example.com', 'resume.pdf', 1, '2026-08-12 05:10:41', '2026-08-12 05:10:41', NULL);
+(1, 'Gokul Kumar', 'gokul@example.com', '9876543210', '1995-05-15', 'Coimbatore', 'Coimbatore', 'Tamil Nadu', '641001', 'Male', 'Married', 'https://example.com', 'resume.pdf', 1, '2026-08-12 05:10:41', '2026-08-12 05:10:41', NULL),
+(2, 'Shay Chan', 'riwuqowid@mailinator.com', '+1 (895) 857-99', '1996-10-17', 'Aut ut at facilis si', 'Quis sunt temporibus', 'Omnis est ipsam cor', 'Ut non con', 'Male', '', 'https://www.cymalipasoguhyk.ca', NULL, 1, '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -150,13 +153,6 @@ CREATE TABLE `cif_references` (
   `updatedAt` datetime NOT NULL,
   `deletedAt` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `cif_references`
---
-
-INSERT INTO `cif_references` (`referenceid`, `cifid`, `referenceName`, `referenceEmail`, `referencePhone`, `consentConfirmed`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 1, 'Raj Kumar', 'raj@example.com', '9876543210', 1, '2026-08-12 05:12:10', '2026-08-12 05:12:10', NULL);
 
 -- --------------------------------------------------------
 
@@ -181,7 +177,8 @@ CREATE TABLE `cif_skills` (
 --
 
 INSERT INTO `cif_skills` (`skillid`, `cifid`, `skillName`, `skillLevel`, `year`, `provider`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(1, 1, 'Google Ads', 'Advanced', '2024-01-01 00:00:00', 'Google', '2026-08-12 05:11:46', '2026-08-12 05:11:46', NULL);
+(1, 1, 'Google Ads', 'Advanced', '2024-01-01 00:00:00', 'Google', '2026-08-12 05:11:46', '2026-08-12 05:11:46', NULL),
+(2, 2, 'Est assumenda incidu', 'Advanced', '2000-12-31 18:30:00', 'Maxime a doloribus v', '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -204,7 +201,8 @@ CREATE TABLE `cif_softwares` (
 --
 
 INSERT INTO `cif_softwares` (`softwareid`, `cifid`, `tools`, `levels`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 1, 'Google Analytics', '', '2026-08-12 05:11:41', '2026-08-12 05:11:41', NULL);
+(1, 1, 'Google Analytics', '', '2026-08-12 05:11:41', '2026-08-12 05:11:41', NULL),
+(2, 2, 'Aut enim quas impedi', 'Good', '2026-08-17 08:48:06', '2026-08-17 08:48:06', NULL);
 
 -- --------------------------------------------------------
 
@@ -231,7 +229,10 @@ INSERT INTO `departments` (`id`, `name`, `isActive`, `createdAt`, `updatedAt`, `
 (3, 'designer', 1, '2026-08-13 07:47:42', '2026-08-13 07:48:18', '2026-08-13 07:48:18'),
 (9, 'dd', 1, '2026-08-13 07:55:41', '2026-08-13 07:56:48', '2026-08-13 07:56:48'),
 (34, 'Geetha', 1, '2026-08-13 09:26:07', '2026-08-13 09:47:45', '2026-08-13 09:47:45'),
-(40, 'Digital Marketing', 1, '2026-08-13 10:01:45', '2026-08-13 10:01:57', NULL);
+(40, 'Digital Marketing', 1, '2026-08-13 10:01:45', '2026-08-13 10:01:57', NULL),
+(41, 'Web development', 1, '2026-08-14 04:32:44', '2026-08-14 04:32:44', NULL),
+(42, 'Media', 1, '2026-08-14 04:35:35', '2026-08-14 04:35:35', NULL),
+(43, 'Designs', 1, '2026-08-14 04:37:47', '2026-08-14 04:37:47', NULL);
 
 -- --------------------------------------------------------
 
@@ -321,7 +322,7 @@ CREATE TABLE `leads` (
 --
 
 INSERT INTO `leads` (`id`, `companyName`, `contactPerson`, `phone`, `email`, `requirement`, `budget`, `leadSourceId`, `leadStatusId`, `assignedTo`, `referralName`, `notes`, `nextFollowupDate`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
-(2, 'Morris Flowers Plc', 'Consectetur eius vol', '9638520741', 'dohibomode@mailinator.com', 'Enim ea atque sed la', 12.00, 3, 2, 1, NULL, 'Minus ut ad consequat Corporis consequuntur alias quos proident do sed accusamus dolor libero consectetur distinctio Rerum', '1988-08-20', 1, '2026-08-12 05:29:48', '2026-08-13 08:56:39', NULL),
+(2, 'Morris Flowers Plc', 'Consectetur eius vol', '9638520741', 'dohibomode@mailinator.com', 'Enim ea atque sed la', 12000.00, 3, 2, 1, NULL, 'Minus ut ad consequat Corporis consequuntur alias quos proident do sed accusamus dolor libero consectetur distinctio Rerum', '1988-08-20', 1, '2026-08-12 05:29:48', '2026-08-17 04:16:07', NULL),
 (3, 'Gibson Crawford Associates', 'Veniam quibusdam mo', '9876543210', 'deba@mailinator.com', 'Incididunt fuga Et ', 82000.00, 1, 6, 1, NULL, 'Vel dolor non error modi odio expedita excepturi et', '2026-08-17', 1, '2026-08-12 10:42:38', '2026-08-13 07:01:00', NULL);
 
 -- --------------------------------------------------------
@@ -355,7 +356,8 @@ INSERT INTO `lead_history` (`id`, `leadId`, `oldStatusId`, `newStatusId`, `notes
 (8, 3, 6, 6, 'Lead Updated', 1, '2026-08-13 07:00:43'),
 (9, 3, 7, 7, 'Lead Updated', 1, '2026-08-13 07:00:50'),
 (10, 3, 6, 6, 'Lead Updated', 1, '2026-08-13 07:01:00'),
-(11, 2, 2, 2, 'Lead Updated', 1, '2026-08-13 08:56:39');
+(11, 2, 2, 2, 'Lead Updated', 1, '2026-08-13 08:56:39'),
+(12, 2, 2, 2, 'Lead Updated', 1, '2026-08-17 04:16:07');
 
 -- --------------------------------------------------------
 
@@ -402,8 +404,7 @@ CREATE TABLE `lead_services` (
 INSERT INTO `lead_services` (`leadId`, `serviceId`) VALUES
 (2, 1),
 (2, 2),
-(3, 1),
-(3, 3);
+(3, 1);
 
 -- --------------------------------------------------------
 
@@ -659,7 +660,8 @@ CREATE TABLE `openings` (
 
 INSERT INTO `openings` (`jobid`, `code`, `jobTitle`, `departmentId`, `openingCount`, `requiredSkills`, `minExperience`, `jobDescription`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
 (1, 'DM-001', 'Digital Marketing Executive', 1, 2, 'SEO, Google Ads, Meta Ads', 2, 'Looking for a Digital Marketing Executive.', 1, '2026-08-12 05:10:32', '2026-08-12 05:10:32', NULL),
-(2, 'JOB002', 'Ipsum nobis rerum i', 1, 3, 'Sed esse voluptas qu', 5, 'lorem', 1, '2026-08-12 09:48:24', '2026-08-12 09:48:24', NULL);
+(2, 'JOB002', 'Ipsum nobis rerum i', 1, 3, 'Sed esse voluptas qu', 5, 'lorem', 1, '2026-08-12 09:48:24', '2026-08-17 07:38:13', '2026-08-17 07:38:13'),
+(3, 'JOB003', 'Ipsum nobis rerum i', 41, 3, 'lorem', 0, 'lorem', 0, '2026-08-17 06:43:22', '2026-08-17 07:37:48', NULL);
 
 -- --------------------------------------------------------
 
@@ -793,7 +795,15 @@ INSERT INTO `refresh_tokens` (`id`, `userId`, `token`, `deviceId`, `deviceName`,
 (3, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTEyNTIzLCJleHAiOjE3ODcxMTczMjN9.uSQNzYg6XBOyWg-FrJyiVBWSgyGJJWnGV48rbRIfxWw', NULL, 'Desktop', 'Electron', 'Windows', '::1', NULL, NULL, '2026-08-12 05:28:43', '2026-08-19 05:28:43', 0, '2026-08-12 05:28:43', '2026-08-12 05:28:43'),
 (4, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTEyNTI5LCJleHAiOjE3ODcxMTczMjl9.78p-ktfeoPpkvCI6jHpuBNE87tJmdnefiXDqp5rt1DM', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 05:28:49', '2026-08-19 05:28:49', 1, '2026-08-12 05:28:49', '2026-08-12 12:24:07'),
 (5, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTE3MzM5LCJleHAiOjE3ODcxMjIxMzl9.agY41oKtOp5K9myiZ08PKXnqXDkTZF1eN9Jw4RpFJRg', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 06:48:59', '2026-08-19 06:48:59', 0, '2026-08-12 06:48:59', '2026-08-12 06:48:59'),
-(6, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTM3ODE1LCJleHAiOjE3ODcxNDI2MTV9.QCty1Ib690DEDDZY_0zDuPcCalRhSJXsdsDEcAtsEqQ', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 12:30:15', '2026-08-19 12:30:15', 0, '2026-08-12 12:30:15', '2026-08-12 12:30:15');
+(6, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NTM3ODE1LCJleHAiOjE3ODcxNDI2MTV9.QCty1Ib690DEDDZY_0zDuPcCalRhSJXsdsDEcAtsEqQ', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-12 12:30:15', '2026-08-19 12:30:15', 0, '2026-08-12 12:30:15', '2026-08-12 12:30:15'),
+(7, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2NjgxNzM1LCJleHAiOjE3ODcyODY1MzV9.2e4ZjWQ7k3ke8HgD4N8623Ew1WaS-fuYx-WQsXZknfU', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-14 04:28:55', '2026-08-21 04:28:55', 0, '2026-08-14 04:28:55', '2026-08-14 04:28:55'),
+(8, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2Njg3MzQ2LCJleHAiOjE3ODcyOTIxNDZ9.__WSqpD9VBaUEBRU8xWkNqZbbUWaoiF133TPr0OUX6I', NULL, NULL, NULL, NULL, NULL, NULL, 3, '2026-08-14 06:02:26', '2026-08-21 06:02:26', 0, '2026-08-14 06:02:26', '2026-08-14 06:02:26'),
+(9, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2Njg3MzQ2LCJleHAiOjE3ODcyOTIxNDZ9.__WSqpD9VBaUEBRU8xWkNqZbbUWaoiF133TPr0OUX6I', NULL, NULL, NULL, NULL, NULL, NULL, 3, '2026-08-14 06:02:26', '2026-08-21 06:02:26', 0, '2026-08-14 06:02:26', '2026-08-14 06:02:26'),
+(10, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2OTM5NDUyLCJleHAiOjE3ODc1NDQyNTJ9.Gkc1SHVVIAgoEoG8VfW2Hb4m0Z8cfxzhzuknZHkkRzA', NULL, NULL, NULL, NULL, NULL, NULL, 8, '2026-08-17 04:04:12', '2026-08-24 04:04:12', 0, '2026-08-17 04:04:12', '2026-08-17 04:04:12'),
+(11, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2OTM5NDUyLCJleHAiOjE3ODc1NDQyNTJ9.Gkc1SHVVIAgoEoG8VfW2Hb4m0Z8cfxzhzuknZHkkRzA', NULL, NULL, NULL, NULL, NULL, NULL, 8, '2026-08-17 04:04:12', '2026-08-24 04:04:12', 0, '2026-08-17 04:04:12', '2026-08-17 04:04:12'),
+(12, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2OTM5NDY3LCJleHAiOjE3ODc1NDQyNjd9.ftqb6zBwzc1CXW9ebMTVhdRmGI4W7O8df5e6F8-o3mk', NULL, NULL, NULL, NULL, NULL, NULL, 7, '2026-08-17 04:04:27', '2026-08-24 04:04:27', 1, '2026-08-17 04:04:27', '2026-08-17 05:03:53'),
+(13, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2OTM5NDY3LCJleHAiOjE3ODc1NDQyNjd9.ftqb6zBwzc1CXW9ebMTVhdRmGI4W7O8df5e6F8-o3mk', NULL, NULL, NULL, NULL, NULL, NULL, 7, '2026-08-17 04:04:27', '2026-08-24 04:04:27', 1, '2026-08-17 04:04:27', '2026-08-17 05:03:53'),
+(14, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzg2OTQzMDM4LCJleHAiOjE3ODc1NDc4Mzh9.suhWqrgd_LUw7nwe12pJtXF4H11CLaZqSvx1H7zJG1s', NULL, 'Desktop', 'Chrome', 'Windows', '::1', NULL, NULL, '2026-08-17 05:03:58', '2026-08-24 05:03:58', 0, '2026-08-17 05:03:58', '2026-08-17 05:03:58');
 
 -- --------------------------------------------------------
 
@@ -855,8 +865,6 @@ CREATE TABLE `services` (
 INSERT INTO `services` (`id`, `serviceCategoryId`, `name`, `code`, `displayOrder`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
 (1, 1, 'Website', 'SITE', 1, 1, '2026-08-04 07:44:25', '2026-08-04 07:44:25', NULL),
 (2, 1, 'SEO', 'SEO', 2, 1, '2026-08-04 07:44:47', '2026-08-04 07:44:47', NULL),
-(3, 2, 'Photoshoot', 'PHOTOSHOOT', 1, 1, '2026-08-12 10:41:51', '2026-08-13 05:31:53', NULL),
-(4, 2, 'Videoshoot', 'VIDEOSHOOT', 2, 1, '2026-08-13 05:53:45', '2026-08-13 05:53:45', NULL),
 (5, 1, 'SMM', 'SMM', 3, 1, '2026-08-13 06:52:56', '2026-08-13 06:52:56', NULL);
 
 -- --------------------------------------------------------
@@ -883,9 +891,8 @@ CREATE TABLE `service_categories` (
 
 INSERT INTO `service_categories` (`id`, `name`, `code`, `color`, `displayOrder`, `isActive`, `createdAt`, `updatedAt`, `deletedAt`) VALUES
 (1, 'DM', 'DM', '#2563EB', 1, 1, '2026-08-12 05:09:44', '2026-08-12 06:28:33', NULL),
-(2, 'Media', 'MEDIA', '#43cb8c', 2, 1, '2026-08-12 10:40:59', '2026-08-13 05:47:10', NULL),
 (3, 'Operations', 'OP', '#eb24e4', 3, 1, '2026-08-13 05:46:28', '2026-08-13 05:46:36', NULL),
-(4, 'Web development', 'WEB', '#24e7eb', 4, 1, '2026-08-13 05:52:47', '2026-08-13 05:52:47', NULL),
+(4, 'Web Development', 'WEB', '#24e7eb', 4, 1, '2026-08-13 05:52:47', '2026-08-13 05:52:47', NULL),
 (5, 'Content', 'CONTENT', '#e9944e', 5, 1, '2026-08-13 05:53:16', '2026-08-13 05:53:16', NULL);
 
 -- --------------------------------------------------------
@@ -1243,19 +1250,19 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `cif_academics`
 --
 ALTER TABLE `cif_academics`
-  MODIFY `academicid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `academicid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `cif_experiences`
 --
 ALTER TABLE `cif_experiences`
-  MODIFY `eid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `eid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `cif_languages`
 --
 ALTER TABLE `cif_languages`
-  MODIFY `languageid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `languageid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `cif_personals`
@@ -1273,7 +1280,7 @@ ALTER TABLE `cif_references`
 -- AUTO_INCREMENT for table `cif_skills`
 --
 ALTER TABLE `cif_skills`
-  MODIFY `skillid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `skillid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `cif_softwares`
@@ -1285,7 +1292,7 @@ ALTER TABLE `cif_softwares`
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `inductions`
@@ -1303,7 +1310,7 @@ ALTER TABLE `leads`
 -- AUTO_INCREMENT for table `lead_history`
 --
 ALTER TABLE `lead_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `lead_sources`
@@ -1369,7 +1376,7 @@ ALTER TABLE `onboard_info`
 -- AUTO_INCREMENT for table `openings`
 --
 ALTER TABLE `openings`
-  MODIFY `jobid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `jobid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `password_reset_tokens`
@@ -1393,7 +1400,7 @@ ALTER TABLE `recruitments`
 -- AUTO_INCREMENT for table `refresh_tokens`
 --
 ALTER TABLE `refresh_tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `roles`

@@ -5,7 +5,8 @@ const {
   CifSkill: cifSkill, 
   CifSoftware: cifSoftware, 
   CifLanguage: cifLanguage, 
-  CifReference: cifReference 
+  CifReference: cifReference,
+  Opening: opening
 } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
@@ -110,6 +111,15 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
   const submissions = await cifPersonal.findAll({
     include: [
       {
+          model: opening,
+          as: "opening",
+          required: false,
+          attributes: [
+              "jobid",
+              "jobTitle"
+          ]
+      },
+      {
         model: cifAcademic,
         as: 'academics',
         required: false
@@ -208,6 +218,15 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
 async function getCompleteSubmission(cifid) {
   return await cifPersonal.findByPk(cifid, {
     include: [
+      {
+          model: opening,
+          as: "opening",
+          required: false,
+          attributes: [
+              "jobid",
+              "jobTitle"
+          ]
+      },
       {
         model: cifAcademic,
         as: 'academics',

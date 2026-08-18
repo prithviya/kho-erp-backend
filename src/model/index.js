@@ -575,6 +575,22 @@ db.CifReference.belongsTo(db.CifPersonal, {
     targetKey: "cifid",
     as: "Personal",
 });
+
+// ============================================================
+// CIF PERSONAL -> OPENING
+// ============================================================
+
+db.CifPersonal.belongsTo(db.Opening, {
+    foreignKey: "appliedPosition",
+    targetKey: "jobid",
+    as: "opening",
+});
+
+db.Opening.hasMany(db.CifPersonal, {
+    foreignKey: "appliedPosition",
+    sourceKey: "jobid",
+    as: "applications",
+});
 /*
 |--------------------------------------------------------------------------
 | SEQUELIZE
