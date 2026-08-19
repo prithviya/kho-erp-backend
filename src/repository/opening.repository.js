@@ -15,6 +15,10 @@ class OpeningRepository extends BaseRepository {
                     attributes: ["id", "name"],
                 },
             ],
+            order: [
+                [{ model: Department, as: "department" }, "name", "ASC"],
+                ["code", "ASC"]
+            ],
         });
     }
 
@@ -41,6 +45,9 @@ class OpeningRepository extends BaseRepository {
                     attributes: ["id", "name"],
                 },
             ],
+            order: [
+                ["code", "ASC"]
+            ],
         });
     }
 
@@ -55,6 +62,10 @@ class OpeningRepository extends BaseRepository {
                     as: "department",
                     attributes: ["id", "name"],
                 },
+            ],
+            order: [
+                [{ model: Department, as: "department" }, "name", "ASC"],
+                ["code", "ASC"]
             ],
         });
     }

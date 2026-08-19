@@ -1,4 +1,4 @@
-const { User, Lead, LeadStatus } = require("../model");
+const { User, Lead, LeadStatus, Role, Opening } = require("../model");
 
 class DashboardService {
     async getOverview() {
@@ -14,10 +14,17 @@ class DashboardService {
             })
             .map((status) => status.id);
 
-        const [activeUsers, recentLeads, totalLeads, activeUsersCount] = await Promise.all([
+        const [activeUsers, recentLeads, totalLeads, activeUsersCount, openings] = await Promise.all([
             User.findAll({
                 where: { isActive: true },
                 attributes: ["id", "firstName", "lastName", "email", "isActive", "updatedAt"],
+                include: [
+                    {
+                        model: Role,
+                        as: "roles",
+                        attributes: ["id", "name"]
+                    }
+                ],
                 order: [["updatedAt", "DESC"]],
                 limit: 5
             }),
@@ -35,7 +42,13 @@ class DashboardService {
                 limit: 5
             }),
             Lead.count({ where: { isActive: true } }),
-            User.count({ where: { isActive: true } })
+            User.count({ where: { isActive: true } }),
+            Opening.findAll({
+                where: { isActive: true },
+                attributes: ["jobid", "jobTitle", "requiredSkills", "minExperience"],
+                limit: 5,
+                order: [["createdAt", "DESC"]]
+            })
         ]);
 
         const convertedDeals = convertedStatusIds.length
@@ -58,6 +71,7 @@ class DashboardService {
                 id: user.id,
                 name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
                 email: user.email,
+                role: user.roles && user.roles.length > 0 ? user.roles[0].name : "N/A",
                 status: user.isActive ? "Active" : "Inactive"
             })),
             recentLeads: recentLeads.map((lead) => ({
@@ -67,6 +81,12 @@ class DashboardService {
                 budget: lead.budget ? Number(lead.budget) : 0,
                 status: lead.leadStatus?.name || "",
                 statusColor: lead.leadStatus?.color || ""
+            })),
+            hiring: openings.map((op) => ({
+                id: op.jobid,
+                jobTitle: op.jobTitle,
+                experience: op.requiredSkills,
+                minExp: op.minExperience
             }))
         };
     }
