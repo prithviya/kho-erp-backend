@@ -28,6 +28,7 @@ router.use("/cif-submissions", require("./cifSubmission.routes"));
 router.use("/project-onboards", require("./projectOnboard.routes"));
 router.use("/dashboard", require("./dashboard.routes"));
 router.use("/employees", require("./employee.routes"));
+router.use("/recruitments", require("./recruitment.routes"));
 
 router.use("/onboardings", require("./onboarding.routes"));
 module.exports = router; 

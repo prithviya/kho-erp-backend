@@ -153,6 +153,10 @@ db.CifSoftware = require("./cifSoftware.model")(
     DataTypes
 );
 
+db.CifSubmission = require("./cifSubmission.model")(
+    sequelize,
+    DataTypes
+);
 /*
 |--------------------------------------------------------------------------
 | ONBOARDING MODELS
@@ -577,6 +581,22 @@ db.CifReference.belongsTo(db.CifPersonal, {
 });
 
 // ============================================================
+// CIF PERSONAL -> SUBMISSION
+// ============================================================
+
+db.CifPersonal.hasOne(db.CifSubmission, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "submission",
+});
+
+db.CifSubmission.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+// ============================================================
 // CIF PERSONAL -> OPENING
 // ============================================================
 
@@ -591,6 +611,25 @@ db.Opening.hasMany(db.CifPersonal, {
     sourceKey: "jobid",
     as: "applications",
 });
+
+// ============================================================
+// CIF PERSONAL -> RECRUITMENT
+// ============================================================
+
+db.CifPersonal.hasOne(db.Recruitment, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "recruitment",
+});
+
+db.Recruitment.belongsTo(db.CifPersonal, {
+    foreignKey: "cifid",
+    targetKey: "cifid",
+    as: "Personal",
+});
+
+
+
 /*
 |--------------------------------------------------------------------------
 | SEQUELIZE

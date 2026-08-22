@@ -6,7 +6,9 @@ const {
   CifSoftware: cifSoftware, 
   CifLanguage: cifLanguage, 
   CifReference: cifReference,
-  Opening: opening
+  CifSubmission: cifSubmission,
+  Opening: opening,
+  Recruitment: recruitment
 } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
@@ -87,6 +89,12 @@ exports.create = asyncHandler(async (req, res) => {
       await cifReference.bulkCreate(referenceData, { transaction });
     }
 
+    // 8. Create Submission record
+    await cifSubmission.create({
+      cifid: cifid,
+      appliedStatus: "Pending"
+    }, { transaction });
+
     // Commit transaction
     await transaction.commit();
 
@@ -148,15 +156,57 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
         model: cifReference,
         as: 'references',
         required: false
+      },
+      {
+        model: cifSubmission,
+        as: 'submission',
+        required: false
+      },
+      {
+        model: recruitment,
+        as: 'recruitment',
+        required: false
       }
     ],
     order: [['createdAt', 'DESC']]
   });
 
+  
+  const formattedSubmissions = submissions.map(sub => {
+    const plainSub = sub.toJSON();
+    plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+    
+    if (plainSub.recruitment) {
+        plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
+        plainSub.interviewMode = plainSub.recruitment.interviewMode;
+        plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
+        plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
+        plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
+        plainSub.statusNote = plainSub.recruitment.statusChangeNote;
+        if (plainSub.recruitment.recruitmentStatus) {
+            plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
+            plainSub.status = plainSub.recruitment.recruitmentStatus;
+        } else {
+            plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+        }
+        plainSub.history = [
+            {
+                user: "System",
+                action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+                date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString()
+            }
+        ];
+    } else {
+        plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+        plainSub.history = [];
+    }
+    return plainSub;
+  });
+
   return ApiResponse.success(
     res,
     "Submissions fetched successfully.",
-    submissions
+    formattedSubmissions
   );
 });
 
@@ -170,10 +220,38 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
     return ApiResponse.error(res, "Application not found.", 404);
   }
 
+  const plainSub = submission.toJSON();
+  plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+  
+  if (plainSub.recruitment) {
+      plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
+      plainSub.interviewMode = plainSub.recruitment.interviewMode;
+      plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
+      plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
+      plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
+      plainSub.statusNote = plainSub.recruitment.statusChangeNote;
+      if (plainSub.recruitment.recruitmentStatus) {
+          plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
+          plainSub.status = plainSub.recruitment.recruitmentStatus;
+      } else {
+          plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+      }
+      plainSub.history = [
+          {
+              user: "System",
+              action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+              date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString()
+          }
+      ];
+  } else {
+      plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+      plainSub.history = [];
+  }
+
   return ApiResponse.success(
     res,
     "Submission fetched successfully.",
-    submission
+    plainSub
   );
 });
 
@@ -182,35 +260,56 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
   const { cifid } = req.params;
   const { status } = req.body;
 
-  // Validate status
-  const validStatuses = ['Pending', 'Shortlisted', 'Selected', 'Rejected'];
+  // Validate frontend status
+  const validStatuses = [
+    "Pending",
+    "Shortlisted",
+    "Rejected"
+  ];
+
   if (!status || !validStatuses.includes(status)) {
     return ApiResponse.error(
-      res, 
-      `Status must be one of: ${validStatuses.join(', ')}`,
+      res,
+      `Status must be one of: ${validStatuses.join(", ")}`,
       400
     );
   }
 
-  // Find and update
-  const personal = await cifPersonal.findByPk(cifid);
-
-  if (!personal) {
-    return ApiResponse.error(res, "Application not found.", 404);
+  // Find submission from cif_submissions table
+  let submission = await cifSubmission.findOne({
+    where: {
+      cifid: cifid
+    }
+  });
+  
+  if (!submission) {
+    submission = await cifSubmission.create({
+      cifid: cifid,
+      appliedStatus: "Pending"
+    });
   }
 
-  // Update status (you need to add status field to cif_personals model)
-  // Option 1: If you have status column in cif_personals
-  personal.status = status;
-  await personal.save();
+  // Convert frontend status to database status
+  const dbStatusMap = {
+    Pending: "Pending",
+    Shortlisted: "Shortlist",
+    Rejected: "Reject"
+  };
 
-  // Option 2: If you want to store status in a separate table
-  // Or you can just update and return
+  const dbStatus = dbStatusMap[status];
+
+  // Update status
+  submission.appliedStatus = dbStatus;
+
+  await submission.save();
 
   return ApiResponse.success(
     res,
     `Application ${status.toLowerCase()} successfully.`,
-    { cifid, status }
+    {
+      cifid,
+      status
+    }
   );
 });
 
@@ -255,6 +354,16 @@ async function getCompleteSubmission(cifid) {
       {
         model: cifReference,
         as: 'references',
+        required: false
+      },
+      {
+        model: cifSubmission,
+        as: 'submission',
+        required: false
+      },
+      {
+        model: recruitment,
+        as: 'recruitment',
         required: false
       }
     ]
