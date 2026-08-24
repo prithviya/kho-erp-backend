@@ -44,7 +44,13 @@ class OpeningService extends BaseService {
             throw new Error("Opening code already exists.");
         }
 
-        return await super.create(data);
+        const opening = await super.create(data);
+        const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+
+        opening.jobOpeningUrl = `${frontendUrl}/cif-form?jobid=${opening.jobid}`;
+        await opening.save();
+
+        return opening;
     }
 
     async getAll() {

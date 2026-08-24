@@ -289,6 +289,15 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
     });
   }
 
+  const currentStatus = String(submission.appliedStatus || "").trim().toLowerCase();
+  if (status === "Shortlisted" && ["reject", "rejected", "selected"].includes(currentStatus)) {
+    return ApiResponse.error(
+      res,
+      "Rejected or selected applications cannot be shortlisted.",
+      409
+    );
+  }
+
   // Convert frontend status to database status
   const dbStatusMap = {
     Pending: "Pending",

@@ -58,6 +58,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: true
+            },
+
+            jobOpeningUrl:{
+                type: DataTypes.STRING(255),
+                allowNull: true
             }
         },
         {
