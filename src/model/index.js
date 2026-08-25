@@ -622,6 +622,12 @@ db.CifPersonal.hasOne(db.Recruitment, {
     as: "recruitment",
 });
 
+db.CifPersonal.hasMany(db.Recruitment, {
+    foreignKey: "cifid",
+    sourceKey: "cifid",
+    as: "recruitmentHistory",
+});
+
 db.Recruitment.belongsTo(db.CifPersonal, {
     foreignKey: "cifid",
     targetKey: "cifid",

@@ -166,6 +166,11 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
         model: recruitment,
         as: 'recruitment',
         required: false
+      },
+      {
+        model: recruitment,
+        as: 'recruitmentHistory',
+        required: false
       }
     ],
     order: [['createdAt', 'DESC']]
@@ -189,13 +194,33 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
         } else {
             plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
         }
-        plainSub.history = [
-            {
+        if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
+            plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
                 user: "System",
-                action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
-                date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString()
-            }
-        ];
+                action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
+                date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
+                time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
+                hrFeedback: historyItem.hrScreeningFeedback,
+                technicalFeedback: historyItem.technicalInterviewFeedback,
+                mdFeedback: historyItem.mdFeedback,
+                statusNote: historyItem.statusChangeNote,
+                interviewMode: historyItem.interviewMode
+            })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+        } else {
+            plainSub.history = [
+                {
+                    user: "System",
+                    action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+                    date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
+                    time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
+                    hrFeedback: plainSub.recruitment.hrScreeningFeedback,
+                    technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
+                    mdFeedback: plainSub.recruitment.mdFeedback,
+                    statusNote: plainSub.recruitment.statusChangeNote,
+                    interviewMode: plainSub.recruitment.interviewMode
+                }
+            ];
+        }
     } else {
         plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
         plainSub.history = [];
@@ -236,13 +261,33 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
       } else {
           plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
       }
-      plainSub.history = [
-          {
+      if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
+          plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
               user: "System",
-              action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
-              date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString()
-          }
-      ];
+              action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
+              date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
+              time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
+              hrFeedback: historyItem.hrScreeningFeedback,
+              technicalFeedback: historyItem.technicalInterviewFeedback,
+              mdFeedback: historyItem.mdFeedback,
+              statusNote: historyItem.statusChangeNote,
+              interviewMode: historyItem.interviewMode
+          })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+      } else {
+          plainSub.history = [
+              {
+                  user: "System",
+                  action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+                  date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
+                  time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
+                  hrFeedback: plainSub.recruitment.hrScreeningFeedback,
+                  technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
+                  mdFeedback: plainSub.recruitment.mdFeedback,
+                  statusNote: plainSub.recruitment.statusChangeNote,
+                  interviewMode: plainSub.recruitment.interviewMode
+              }
+          ];
+      }
   } else {
       plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
       plainSub.history = [];
@@ -373,6 +418,11 @@ async function getCompleteSubmission(cifid) {
       {
         model: recruitment,
         as: 'recruitment',
+        required: false
+      },
+      {
+        model: recruitment,
+        as: 'recruitmentHistory',
         required: false
       }
     ]
