@@ -3,6 +3,7 @@ const router = express.Router();
 
 const controller = require("../controllers/onboarding.controller");
 
+router.post("/record", controller.saveRecord);
 router.post("/", controller.create);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);

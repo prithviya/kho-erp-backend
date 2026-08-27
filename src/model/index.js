@@ -168,6 +168,11 @@ db.Onboarding = require("./onboarding.model")(
     DataTypes
 );
 
+db.OnboardingRecord = require("./onboardingRecord.model")(
+    sequelize,
+    DataTypes
+);
+
 db.OnboardingInfo = require("./onboardinginfo.model")(
     sequelize,
     DataTypes
