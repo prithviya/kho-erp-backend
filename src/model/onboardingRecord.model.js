@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
     const OnboardingRecord = sequelize.define(
-        "OnboardingRecord",
+        "onboardingRecord",
         {
-            onboardingrecordid: {
+            id: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
@@ -21,14 +21,21 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: "DRAFT",
             },
-            formData: {
+            experienceDetails: {
                 type: DataTypes.JSON,
                 allowNull: false,
+                defaultValue: [],
             },
+            educationDetails: {
+                type: DataTypes.JSON,
+                allowNull: false,
+                defaultValue: [],
+            }
         },
         {
             tableName: "onboarding_records",
             timestamps: true,
+            paranoid: true,
         }
     );
 

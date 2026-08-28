@@ -37,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
             },
             bid: {
                 type: DataTypes.INTEGER,
-                allowNull: false,
+                allowNull: true,
                 references: {
                     model: "onboarding_banks",
                     key: "bid"

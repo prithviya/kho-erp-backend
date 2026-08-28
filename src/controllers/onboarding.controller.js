@@ -12,6 +12,59 @@ exports.create = asyncHandler(async (req, res) => {
     );
 });
 
+exports.saveRecord = asyncHandler(async (req, res) => {
+    const record = await onboarding.saveRecord(req.body);
+
+    return ApiResponse.success(
+        res,
+        "Onboarding record saved successfully.",
+        record
+    );
+});
+
+exports.updateRecordByCifId = asyncHandler(async (req, res) => {
+    const record = await onboarding.updateRecordByCifId(
+        req.params.cifid,
+        req.body
+    );
+
+    return ApiResponse.success(
+        res,
+        "Onboarding record updated successfully.",
+        record
+    );
+});
+
+exports.getRecordByCifId = asyncHandler(async (req, res) => {
+    const record = await onboarding.getRecordByCifId(req.params.cifid);
+
+    return ApiResponse.success(
+        res,
+        "Onboarding record fetched successfully.",
+        record
+    );
+});
+
+exports.getAllRecords = asyncHandler(async (_req, res) => {
+    const records = await onboarding.getAllRecords();
+
+    return ApiResponse.success(
+        res,
+        "Onboarding records fetched successfully.",
+        records
+    );
+});
+
+exports.getNextEmployeeId = asyncHandler(async (_req, res) => {
+    const employeeId = await onboarding.getNextEmployeeId();
+
+    return ApiResponse.success(
+        res,
+        "Next employee ID fetched successfully.",
+        { employeeId }
+    );
+});
+
 exports.getAll = asyncHandler(async (req, res) => {
     const onboardings = await onboarding.getAll();
 
@@ -53,16 +106,5 @@ exports.delete = asyncHandler(async (req, res) => {
     return ApiResponse.success(
         res,
         "Onboarding deleted successfully."
-    );
-});
-
-exports.saveRecord = asyncHandler(async (req, res) => {
-    const { cifid, formData, status = "DRAFT" } = req.body;
-    const onboardingData = await onboarding.saveRecord(cifid, formData, status);
-
-    return ApiResponse.success(
-        res,
-        status === "FINAL" ? "Onboarding submitted successfully." : "Onboarding draft saved successfully.",
-        onboardingData
     );
 });
