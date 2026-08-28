@@ -3,15 +3,12 @@ const sqlLogger = require("../helpers/sqlLogger");
 
 require("dotenv").config();
 
-const sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
-    {
+const sequelize = new Sequelize( 
+    process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, 
+    {   
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         dialect: process.env.DB_TYPE,
-
         logging:
             process.env.ENABLE_SQL_LOG === "true"
                 ? (sql, timing) => {
@@ -21,7 +18,6 @@ const sequelize = new Sequelize(
                 : false,
 
         benchmark: true,
-
         pool: {
             max: 20,
             min: 0,
@@ -33,377 +29,129 @@ const sequelize = new Sequelize(
 
 const db = {};
 
-/*
-|--------------------------------------------------------------------------
-| USER / AUTH MODELS
-|--------------------------------------------------------------------------
-*/
-
+/* USER / AUTH MODELS */
 db.User = require("./user.model")(sequelize, DataTypes);
 db.UserRole = require("./userRole.model")(sequelize, DataTypes);
 db.Role = require("./role.model")(sequelize, DataTypes);
 db.Permission = require("./permission.model")(sequelize, DataTypes);
-db.RolePermission = require("./rolePermission.model")(
-    sequelize,
-    DataTypes
-);
+db.RolePermission = require("./rolePermission.model")( sequelize, DataTypes);
 db.Module = require("./module.model")(sequelize, DataTypes);
-db.RefreshToken = require("./refreshToken.model")(
-    sequelize,
-    DataTypes
-);
-db.PasswordResetToken = require("./passwordResetToken.model")(
-    sequelize,
-    DataTypes
-);
+db.RefreshToken = require("./refreshToken.model")( sequelize, DataTypes);
+db.PasswordResetToken = require("./passwordResetToken.model")( sequelize, DataTypes);
 
-/*
-|--------------------------------------------------------------------------
-| LEAD MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.LeadSource = require("./leadSource.model")(
-    sequelize,
-    DataTypes
-);
-
-db.LeadStatus = require("./leadStatus.model")(
-    sequelize,
-    DataTypes
-);
-
+/* LEAD MODELS */
+db.LeadSource = require("./leadSource.model")( sequelize, DataTypes);
+db.LeadStatus = require("./leadStatus.model")( sequelize, DataTypes);
 db.Lead = require("./lead.model")(sequelize, DataTypes);
+db.LeadService = require("./leadService.model")( sequelize, DataTypes);
+db.LeadHistory = require("./leadHistory.model")( sequelize, DataTypes);
 
-db.LeadService = require("./leadService.model")(
-    sequelize,
-    DataTypes
-);
+/* SERVICE MODELS */
+db.ServiceCategory = require("./serviceCategory.model")( sequelize, DataTypes);
+db.Service = require("./service.model")( sequelize, DataTypes);
 
-db.LeadHistory = require("./leadHistory.model")(
-    sequelize,
-    DataTypes
-);
+/* MASTER */
+db.Department = require("./department.model")( sequelize, DataTypes);
 
-/*
-|--------------------------------------------------------------------------
-| SERVICE MODELS
-|--------------------------------------------------------------------------
-*/
+/* CIF MODELS */
+db.CifPersonal = require("./cifPersonal.model")( sequelize, DataTypes);
+db.CifAcademic = require("./cifAcademic.model")( sequelize, DataTypes);
+db.CifExperience = require("./cifExperience.model")( sequelize, DataTypes);
+db.CifLanguage = require("./cifLanguage.model")( sequelize, DataTypes);
+db.CifReference = require("./cifReference.model")( sequelize, DataTypes);
+db.CifSkill = require("./cifSkill.model")( sequelize, DataTypes);
+db.CifSoftware = require("./cifSoftware.model")( sequelize, DataTypes);
+db.CifSubmission = require("./cifSubmission.model")( sequelize, DataTypes);
 
-db.ServiceCategory = require("./serviceCategory.model")(
-    sequelize,
-    DataTypes
-);
+/* ONBOARDING MODELS */
+db.Onboarding = require("./onboarding.model")( sequelize, DataTypes);
+db.OnboardingInfo = require("./onboardinginfo.model")( sequelize, DataTypes);
+db.OnboardingHealth = require("./onboardingHealth.model")( sequelize, DataTypes);
+db.OnboardingBank = require("./onboardingBank.model")( sequelize, DataTypes);
+db.OnboardingDocument = require("./onboardingDocument.model")( sequelize, DataTypes);
+db.OnboardEquipment = require("./onboardEquipment.model")( sequelize, DataTypes);
+db.OnboardInduction = require("./onboardInduction.model")( sequelize, DataTypes);
+db.OnboardingOffice = require("./onboardingOfficeTour")( sequelize, DataTypes);
 
-db.Service = require("./service.model")(
-    sequelize,
-    DataTypes
-);
+/* RECRUITMENT */
+db.Recruitment = require("./recruitment.model")( sequelize, DataTypes);
 
-/*
-|--------------------------------------------------------------------------
-| MASTER
-|--------------------------------------------------------------------------
-*/
+/* OTHER MODELS */
+db.Opening = require("./opening.model")( sequelize, DataTypes);
+db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes);
+db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes);
+db.Employee = require("./employee.model")( sequelize, DataTypes);
 
-db.Department = require("./department.model")(
-    sequelize,
-    DataTypes
-);
+/* VENTOR MODELS */
+db.Ventor = require("./ventor.model")( sequelize, DataTypes);
+db.VentorService = require("./ventorServicedetails.model")( sequelize, DataTypes);
 
-/*
-|--------------------------------------------------------------------------
-| CIF MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.CifPersonal = require("./cifPersonal.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifAcademic = require("./cifAcademic.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifExperience = require("./cifExperience.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifLanguage = require("./cifLanguage.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifReference = require("./cifReference.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifSkill = require("./cifSkill.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifSoftware = require("./cifSoftware.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CifSubmission = require("./cifSubmission.model")(
-    sequelize,
-    DataTypes
-);
-/*
-|--------------------------------------------------------------------------
-| ONBOARDING MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.Onboarding = require("./onboarding.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingRecord = require("./onboardingRecord.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingInfo = require("./onboardinginfo.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingHealth = require("./onboardingHealth.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingBank = require("./onboardingBank.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingDocument = require("./onboardingDocument.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardEquipment = require("./onboardEquipment.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardInduction = require("./onboardInduction.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingOffice = require("./onboardingOfficeTour")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| RECRUITMENT
-|--------------------------------------------------------------------------
-*/
-
-db.Recruitment = require("./recruitment.model")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| OTHER MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.Opening = require("./opening.model")(
-    sequelize,
-    DataTypes
-);
-
-db.ProjectOnboard = require("./projectOnboard.model")(
-    sequelize,
-    DataTypes
-);
-
-db.ProjectAssignment = require("./projectAssignment.model")(
-    sequelize,
-    DataTypes
-);
-
-db.Employee = require("./employee.model")(
-    sequelize,
-    DataTypes
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| USER / AUTH RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+/* USER / AUTH RELATIONSHIPS */
 
 // User -> Password Reset Tokens
-db.User.hasMany(db.PasswordResetToken, {
-    foreignKey: "userId",
-    as: "passwordResetTokens",
-});
+db.User.hasMany(db.PasswordResetToken, { foreignKey: "userId",as: "passwordResetTokens" });
 
-db.PasswordResetToken.belongsTo(db.User, {
-    foreignKey: "userId",
-    as: "user",
-});
+db.PasswordResetToken.belongsTo(db.User, { foreignKey: "userId", as: "user"});
 
 // User -> Refresh Tokens
-db.User.hasMany(db.RefreshToken, {
-    foreignKey: "userId",
-    as: "refreshTokens",
-});
+db.User.hasMany(db.RefreshToken, { foreignKey: "userId", as: "refreshTokens"});
 
-db.RefreshToken.belongsTo(db.User, {
-    foreignKey: "userId",
-    as: "user",
-});
+db.RefreshToken.belongsTo(db.User, { foreignKey: "userId", as: "user"});
 
 // User <-> Role
-db.User.belongsToMany(db.Role, {
-    through: db.UserRole,
-    foreignKey: "userId",
-    otherKey: "roleId",
-    as: "roles",
-});
+db.User.belongsToMany(db.Role, { through: db.UserRole, foreignKey: "userId", otherKey: "roleId", as: "roles"});
 
-db.Role.belongsToMany(db.User, {
-    through: db.UserRole,
-    foreignKey: "roleId",
-    otherKey: "userId",
-    as: "users",
-});
+db.Role.belongsToMany(db.User, { through: db.UserRole, foreignKey: "roleId", otherKey: "userId", as: "users"});
 
 // Role <-> Permission
-db.Role.belongsToMany(db.Permission, {
-    through: db.RolePermission,
-    foreignKey: "roleId",
-    otherKey: "permissionId",
-    as: "permissions",
-});
+db.Role.belongsToMany(db.Permission, { through: db.RolePermission, foreignKey: "roleId", otherKey: "permissionId", as: "permissions"});
 
-db.Permission.belongsToMany(db.Role, {
-    through: db.RolePermission,
-    foreignKey: "permissionId",
-    otherKey: "roleId",
-    as: "roles",
-});
+db.Permission.belongsToMany(db.Role, { through: db.RolePermission, foreignKey: "permissionId", otherKey: "roleId", as: "roles"});
 
 // Module -> Permissions
-db.Module.hasMany(db.Permission, {
-    foreignKey: "moduleId",
-});
+db.Module.hasMany(db.Permission, { foreignKey: "moduleId"});
 
-db.Permission.belongsTo(db.Module, {
-    foreignKey: "moduleId",
-});
+db.Permission.belongsTo(db.Module, { foreignKey: "moduleId"});
 
 
-/*
-|--------------------------------------------------------------------------
-| LEAD RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+/* LEAD RELATIONSHIPS */
 
 // Lead -> Lead Source
-db.Lead.belongsTo(db.LeadSource, {
-    foreignKey: "leadSourceId",
-    as: "leadSource",
-});
+db.Lead.belongsTo(db.LeadSource, { foreignKey: "leadSourceId", as: "leadSource"});
 
-db.LeadSource.hasMany(db.Lead, {
-    foreignKey: "leadSourceId",
-    as: "leads",
-});
+db.LeadSource.hasMany(db.Lead, { foreignKey: "leadSourceId", as: "leads"});
 
 // Lead -> Lead Status
-db.Lead.belongsTo(db.LeadStatus, {
-    foreignKey: "leadStatusId",
-    as: "leadStatus",
-});
+db.Lead.belongsTo(db.LeadStatus, { foreignKey: "leadStatusId", as: "leadStatus"});
 
-db.LeadStatus.hasMany(db.Lead, {
-    foreignKey: "leadStatusId",
-    as: "leads",
-});
+db.LeadStatus.hasMany(db.Lead, { foreignKey: "leadStatusId", as: "leads"});
 
 // Lead -> Assigned User
-db.Lead.belongsTo(db.User, {
-    foreignKey: "assignedTo",
-    as: "assignedUser",
-});
+db.Lead.belongsTo(db.User, { foreignKey: "assignedTo", as: "assignedUser"});
 
-db.User.hasMany(db.Lead, {
-    foreignKey: "assignedTo",
-    as: "assignedLeads",
-});
+db.User.hasMany(db.Lead, { foreignKey: "assignedTo", as: "assignedLeads"});
 
 // Lead -> Lead History
-db.Lead.hasMany(db.LeadHistory, {
-    foreignKey: "leadId",
-    as: "history",
-});
+db.Lead.hasMany(db.LeadHistory, { foreignKey: "leadId", as: "history"});
 
-db.LeadHistory.belongsTo(db.Lead, {
-    foreignKey: "leadId",
-    as: "lead",
-});
+db.LeadHistory.belongsTo(db.Lead, { foreignKey: "leadId", as: "lead"});
 
 // Lead History -> User
-db.LeadHistory.belongsTo(db.User, {
-    foreignKey: "changedBy",
-    as: "changedUser",
-});
+db.LeadHistory.belongsTo(db.User, { foreignKey: "changedBy", as: "changedUser"});
 
 
-/*
-|--------------------------------------------------------------------------
-| SERVICE RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+/* SERVICE RELATIONSHIPS */
 
 // Service Category -> Services
-db.ServiceCategory.hasMany(db.Service, {
-    foreignKey: "serviceCategoryId",
-    as: "services",
-});
+db.ServiceCategory.hasMany(db.Service, { foreignKey: "serviceCategoryId", as: "services"});
 
-db.Service.belongsTo(db.ServiceCategory, {
-    foreignKey: "serviceCategoryId",
-    as: "category",
-});
+db.Service.belongsTo(db.ServiceCategory, { foreignKey: "serviceCategoryId", as: "category"});
 
 // Lead <-> Service
-db.Lead.belongsToMany(db.Service, {
-    through: db.LeadService,
-    foreignKey: "leadId",
-    otherKey: "serviceId",
-    as: "services",
-});
+db.Lead.belongsToMany(db.Service, { through: db.LeadService, foreignKey: "leadId", otherKey: "serviceId", as: "services"});
 
-db.Service.belongsToMany(db.Lead, {
-    through: db.LeadService,
-    foreignKey: "serviceId",
-    otherKey: "leadId",
-    as: "leads",
-});
-
-    
+db.Service.belongsToMany(db.Lead, { through: db.LeadService, foreignKey: "serviceId", otherKey: "leadId", as: "leads"});
+ 
 /*
 |--------------------------------------------------------------------------
 | PROJECT RELATIONSHIPS
@@ -411,60 +159,30 @@ db.Service.belongsToMany(db.Lead, {
 */
 
 // Project Onboard -> Lead
-db.ProjectOnboard.belongsTo(db.Lead, {
-    foreignKey: "leadId",
-    as: "lead",
-});
+db.ProjectOnboard.belongsTo(db.Lead, { foreignKey: "leadId", as: "lead"});
 
-db.Lead.hasMany(db.ProjectOnboard, {
-    foreignKey: "leadId",
-    as: "projects",
-});
+db.Lead.hasMany(db.ProjectOnboard, { foreignKey: "leadId", as: "projects"});
 
 // Project Onboard -> User
-db.ProjectOnboard.belongsTo(db.User, {
-    foreignKey: "createdBy",
-    as: "creator",
-});
+db.ProjectOnboard.belongsTo(db.User, { foreignKey: "createdBy", as: "creator"});
 
-db.User.hasMany(db.ProjectOnboard, {
-    foreignKey: "createdBy",
-    as: "createdProjects",
-});
+db.User.hasMany(db.ProjectOnboard, { foreignKey: "createdBy", as: "createdProjects"});
 
 // Project Onboard -> Assignments
-db.ProjectOnboard.hasMany(db.ProjectAssignment, {
-    foreignKey: "projectOnboardId",
-    as: "assignments",
-});
+db.ProjectOnboard.hasMany(db.ProjectAssignment, { foreignKey: "projectOnboardId", as: "assignments"});
 
-db.ProjectAssignment.belongsTo(db.ProjectOnboard, {
-    foreignKey: "projectOnboardId",
-    as: "project",
-});
+db.ProjectAssignment.belongsTo(db.ProjectOnboard, { foreignKey: "projectOnboardId", as: "project"});
 
 // Project Assignment -> Assignee
-db.ProjectAssignment.belongsTo(db.User, {
-    foreignKey: "assignedToId",
-    as: "assignee",
-});
+db.ProjectAssignment.belongsTo(db.User, { foreignKey: "assignedToId", as: "assignee"});
 
-db.User.hasMany(db.ProjectAssignment, {
-    foreignKey: "assignedToId",
-    as: "projectAssignments",
-});
+db.User.hasMany(db.ProjectAssignment, { foreignKey: "assignedToId", as: "projectAssignments"});
 
 // Project Assignment -> Reporting Head
-db.ProjectAssignment.belongsTo(db.User, {
-    foreignKey: "reportingHeadId",
-    as: "reportingHead",
-});
+db.ProjectAssignment.belongsTo(db.User, { foreignKey: "reportingHeadId", as: "reportingHead"});
 
 // Project Assignment -> Assigned By
-db.ProjectAssignment.belongsTo(db.User, {
-    foreignKey: "assignedBy",
-    as: "assignedByUser",
-});
+db.ProjectAssignment.belongsTo(db.User, { foreignKey: "assignedBy", as: "assignedByUser"});
 
 
 /*
@@ -473,28 +191,14 @@ db.ProjectAssignment.belongsTo(db.User, {
 |--------------------------------------------------------------------------
 */
 
-db.Employee.belongsTo(db.User, {
-    foreignKey: "createdBy",
-    as: "creator",
-});
+db.Employee.belongsTo(db.User, { foreignKey: "createdBy", as: "creator"});
 
-db.User.hasMany(db.Employee, {
-    foreignKey: "createdBy",
-    as: "createdEmployees",
-});
+db.User.hasMany(db.Employee, { foreignKey: "createdBy", as: "createdEmployees"});
 
 
-db.Opening.belongsTo(db.Department, {
-    foreignKey: "departmentId",
-    targetKey: "id",
-    as: "department",
-});
+db.Opening.belongsTo(db.Department, { foreignKey: "departmentId", targetKey: "id", as: "department"});
 
-db.Department.hasMany(db.Opening, {
-    foreignKey: "departmentId",
-    sourceKey: "id",
-    as: "openings",
-});
+db.Department.hasMany(db.Opening, { foreignKey: "departmentId", sourceKey: "id", as: "openings"});
 
 /*
 |--------------------------------------------------------------------------
@@ -503,142 +207,71 @@ db.Department.hasMany(db.Opening, {
 */
 
 // Personal -> Academic
-db.CifPersonal.hasMany(db.CifAcademic, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "academics",
-});
+db.CifPersonal.hasMany(db.CifAcademic, { foreignKey: "cifid", sourceKey: "cifid", as: "academics"});
 
-db.CifAcademic.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifAcademic.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 
 // Personal -> Experience
-db.CifPersonal.hasMany(db.CifExperience, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "experiences",
-});
+db.CifPersonal.hasMany(db.CifExperience, { foreignKey: "cifid", sourceKey: "cifid", as: "experiences"});
 
-db.CifExperience.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifExperience.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 
 // Personal -> Language
-db.CifPersonal.hasMany(db.CifLanguage, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "languages",
-});
+db.CifPersonal.hasMany(db.CifLanguage, { foreignKey: "cifid", sourceKey: "cifid", as: "languages"});
 
-db.CifLanguage.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifLanguage.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 
 // Personal -> Software
-db.CifPersonal.hasMany(db.CifSoftware, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "softwares",
-});
+db.CifPersonal.hasMany(db.CifSoftware, { foreignKey: "cifid", sourceKey: "cifid", as: "softwares"});
 
-db.CifSoftware.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifSoftware.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 
 // Personal -> Skills
-db.CifPersonal.hasMany(db.CifSkill, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "skills",
-});
+db.CifPersonal.hasMany(db.CifSkill, { foreignKey: "cifid", sourceKey: "cifid", as: "skills"});
 
-db.CifSkill.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifSkill.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 
 // Personal -> Reference
-db.CifPersonal.hasMany(db.CifReference, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "references",
-});
+db.CifPersonal.hasMany(db.CifReference, { foreignKey: "cifid", sourceKey: "cifid", as: "references"});
 
-db.CifReference.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifReference.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal"});
 
 // ============================================================
 // CIF PERSONAL -> SUBMISSION
 // ============================================================
 
-db.CifPersonal.hasOne(db.CifSubmission, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "submission",
-});
+db.CifPersonal.hasOne(db.CifSubmission, { foreignKey: "cifid", sourceKey: "cifid", as: "submission", });
 
-db.CifSubmission.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.CifSubmission.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal", });
 
 // ============================================================
 // CIF PERSONAL -> OPENING
 // ============================================================
 
-db.CifPersonal.belongsTo(db.Opening, {
-    foreignKey: "appliedPosition",
-    targetKey: "jobid",
-    as: "opening",
-});
+db.CifPersonal.belongsTo(db.Opening, { foreignKey: "appliedPosition", targetKey: "jobid", as: "opening", });
 
-db.Opening.hasMany(db.CifPersonal, {
-    foreignKey: "appliedPosition",
-    sourceKey: "jobid",
-    as: "applications",
-});
+db.Opening.hasMany(db.CifPersonal, { foreignKey: "appliedPosition", sourceKey: "jobid", as: "applications", });
 
 // ============================================================
 // CIF PERSONAL -> RECRUITMENT
 // ============================================================
 
-db.CifPersonal.hasOne(db.Recruitment, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "recruitment",
-});
+db.CifPersonal.hasOne(db.Recruitment, { foreignKey: "cifid", sourceKey: "cifid", as: "recruitment", });
 
-db.CifPersonal.hasMany(db.Recruitment, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
-    as: "recruitmentHistory",
-});
+db.CifPersonal.hasMany(db.Recruitment, { foreignKey: "cifid", sourceKey: "cifid", as: "recruitmentHistory", });
 
-db.Recruitment.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
-});
+db.Recruitment.belongsTo(db.CifPersonal, { foreignKey: "cifid", targetKey: "cifid", as: "Personal", });
 
+db.Ventor.hasMany(db.VentorService, { foreignKey: "vid", sourceKey: "vid", as: "services", });
+
+
+// VentorService -> Ventor
+db.VentorService.belongsTo(db.Ventor, { foreignKey: "vid", targetKey: "vid", as: "ventor", });
 
 
 /*

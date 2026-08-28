@@ -7,8 +7,7 @@ const connectDatabase = async () => {
         logger.info("MySQL Connected Successfully");
 
         try {
-            await db.sequelize.sync({ alter: true });
-            
+            await db.sequelize.sync();
             logger.info("Database schema sync completed");
         } catch (syncError) {
             logger.warn("⚠️ Database schema sync skipped:", syncError.message);

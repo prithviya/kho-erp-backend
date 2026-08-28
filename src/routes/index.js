@@ -31,4 +31,8 @@ router.use("/employees", require("./employee.routes"));
 router.use("/recruitments", require("./recruitment.routes"));
 
 router.use("/onboardings", require("./onboarding.routes"));
+
+router.use("/ventor", require("./ventor.routes"));
+router.use("/ventorservices", require("./ventorService.routes"));
+
 module.exports = router; 
