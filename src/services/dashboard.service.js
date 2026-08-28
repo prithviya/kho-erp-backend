@@ -45,7 +45,7 @@ class DashboardService {
             User.count({ where: { isActive: true } }),
             Opening.findAll({
                 where: { isActive: true },
-                attributes: ["jobid", "jobTitle", "requiredSkills", "minExperience"],
+                attributes: ["jobid", "jobTitle", "requiredSkills", "minExperience", "openingCount  "],
                 limit: 5,
                 order: [["createdAt", "DESC"]]
             })
@@ -86,7 +86,8 @@ class DashboardService {
                 id: op.jobid,
                 jobTitle: op.jobTitle,
                 experience: op.requiredSkills,
-                minExp: op.minExperience
+                minExp: op.minExperience,
+                openingCount: op.openingCount
             }))
         };
     }
