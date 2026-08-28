@@ -55,3 +55,14 @@ exports.delete = asyncHandler(async (req, res) => {
         "Onboarding deleted successfully."
     );
 });
+
+exports.saveRecord = asyncHandler(async (req, res) => {
+    const { cifid, formData, status = "DRAFT" } = req.body;
+    const onboardingData = await onboarding.saveRecord(cifid, formData, status);
+
+    return ApiResponse.success(
+        res,
+        status === "FINAL" ? "Onboarding submitted successfully." : "Onboarding draft saved successfully.",
+        onboardingData
+    );
+});
