@@ -1145,6 +1145,7 @@ class OnboardingService extends BaseService {
                 transaction,
             });
 
+            let onboardingRecord;
             if (existing) {
                 await existing.update(
                     {
@@ -1155,19 +1156,85 @@ class OnboardingService extends BaseService {
                     },
                     { transaction }
                 );
-                return existing;
+                onboardingRecord = existing;
+            } else {
+                onboardingRecord = await db.OnboardingRecord.create(
+                    {
+                        cifid,
+                        status,
+                        experienceDetails,
+                        educationDetails,
+                        formData: snapshotFormData,
+                    },
+                    { transaction }
+                );
             }
 
-            return db.OnboardingRecord.create(
-                {
-                    cifid,
-                    status,
-                    experienceDetails,
-                    educationDetails,
-                    formData: snapshotFormData,
-                },
-                { transaction }
-            );
+            if (status === "FINAL") {
+                const employeeCode = String(formData.employeeId || "").trim();
+                const officialEmail = String(formData.officialEmail || formData.personalEmail || personal.email).trim();
+                
+                if (employeeCode) {
+                    const [skills, softwares, languages, references, docs] = await Promise.all([
+                        db.CifSkill.findAll({ where: { cifid }, transaction }),
+                        db.CifSoftware.findAll({ where: { cifid }, transaction }),
+                        db.CifLanguage.findAll({ where: { cifid }, transaction }),
+                        db.CifReference.findAll({ where: { cifid }, transaction }),
+                        this.getOnboardingDocumentRows(cifid, transaction)
+                    ]);
+                    
+                    let resumeData = {};
+                    if (docs && docs.length > 0) {
+                        const resumeDoc = docs.find(d => d.documentType && d.documentType.toLowerCase().includes('resume'));
+                        if (resumeDoc) {
+                            resumeData = {
+                                resumeOriginalName: resumeDoc.fileName,
+                                resumeStoredName: resumeDoc.fileName,
+                                portfolioLink: resumeDoc.fileUrl || resumeDoc.file_url || null
+                            };
+                        }
+                    }
+
+                    const employeePayload = {
+                        employeeCode,
+                        jobPosition: String(formData.designation || "Employee").trim(),
+                        fullName: fullName || personal.fullName || "Employee",
+                        email: officialEmail || `emp-${employeeCode}@local.invalid`,
+                        phone: String(formData.officePhone || formData.personalPhone || personal.phoneNumber).trim() || "N/A",
+                        dateOfBirth: formData.dateOfBirth || personal.DOB || null,
+                        city: currentAddress.city || personal.city || null,
+                        pinCode: currentAddress.pincode || personal.pinCode || null,
+                        gender,
+                        ...resumeData,
+                        education: educationDetails || [],
+                        workExperience: experienceDetails || [],
+                        skills: skills.map(s => s.toJSON()),
+                        softwareTools: softwares.map(s => s.toJSON()),
+                        languages: languages.map(l => l.toJSON()),
+                        references: references.map(r => r.toJSON()),
+                        consent: true,
+                        status: "Active"
+                    };
+
+                    const existingEmployee = await db.Employee.findOne({
+                        where: {
+                            [db.Sequelize.Op.or]: [
+                                { employeeCode },
+                                { email: employeePayload.email }
+                            ]
+                        },
+                        transaction
+                    });
+
+                    if (existingEmployee) {
+                        await existingEmployee.update(employeePayload, { transaction });
+                    } else {
+                        await db.Employee.create(employeePayload, { transaction });
+                    }
+                }
+            }
+
+            return onboardingRecord;
         });
     }
 

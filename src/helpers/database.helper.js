@@ -22,11 +22,15 @@ const connectDatabase = async () => {
                     : "Database schema sync completed"
             );
         } catch (syncError) {
-            logger.warn("⚠️ Database schema sync skipped:", syncError.message);
+            logger.error("⚠️ Database schema sync failed. See stack trace below:");
+            logger.error(syncError?.stack || syncError?.message || String(syncError));
+            logger.warn(
+                "Database schema sync skipped. Review the DB schema and model definitions for mismatches."
+            );
         }
     } catch (error) {
         logger.error("❌ Database Connection Failed");
-        logger.error(error.message);
+        logger.error(error?.stack || error?.message || String(error));
         process.exit(1);
     }
 };
