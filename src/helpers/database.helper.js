@@ -7,8 +7,20 @@ const connectDatabase = async () => {
         logger.info("MySQL Connected Successfully");
 
         try {
-            await db.sequelize.sync({ alter: true });
-            logger.info("Database schema sync completed");
+            const autoSyncEnabled = process.env.DB_AUTO_SYNC !== "false";
+            const alterSyncEnabled = process.env.DB_SYNC_ALTER === "true";
+
+            if (!autoSyncEnabled) {
+                logger.info("Database schema sync disabled (DB_AUTO_SYNC=false)");
+                return;
+            }
+
+            await db.sequelize.sync(alterSyncEnabled ? { alter: true } : undefined);
+            logger.info(
+                alterSyncEnabled
+                    ? "Database schema sync completed with alter=true"
+                    : "Database schema sync completed"
+            );
         } catch (syncError) {
             logger.warn("⚠️ Database schema sync skipped:", syncError.message);
         }

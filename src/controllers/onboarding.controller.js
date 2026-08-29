@@ -65,6 +65,32 @@ exports.getNextEmployeeId = asyncHandler(async (_req, res) => {
     );
 });
 
+exports.uploadDocument = asyncHandler(async (req, res) => {
+    if (!req.file) {
+        throw new Error("Document file is required.");
+    }
+
+    const cifid = Number(req.body?.cifid);
+    const uploadData = cifid
+        ? await onboarding.saveUploadedDocument(
+              cifid,
+              req.file,
+              req.body?.documentType
+          )
+        : onboarding.createDocumentUploadPayload(
+              req.file,
+              req.body?.documentType
+          );
+
+    return ApiResponse.success(
+        res,
+        cifid
+            ? "Onboarding document uploaded and stored successfully."
+            : "Onboarding document uploaded successfully.",
+        uploadData
+    );
+});
+
 exports.getAll = asyncHandler(async (req, res) => {
     const onboardings = await onboarding.getAll();
 

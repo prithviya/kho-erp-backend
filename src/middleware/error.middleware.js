@@ -15,6 +15,11 @@ module.exports = (err, req, res, next) => {
         return ApiResponse.unauthorized(res, err.name === "TokenExpiredError" ? "Token expired." : "Invalid token.");
     }
 
+    // Explicit application validation errors
+    if (Number(err.status) >= 400 && Number(err.status) < 500) {
+        return ApiResponse.error(res, err.message, err.errors || null, err.status);
+    }
+
     // Operational errors thrown via AppError
     if (err.isOperational) {
         return ApiResponse.error(res, err.message, null, err.statusCode);

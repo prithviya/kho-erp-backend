@@ -1,10 +1,12 @@
 const BaseService = require("./base.service");
 const repository = require("../repository/onboarding.repository");
 const db = require("../model");
+const { QueryTypes } = require("sequelize");
 
 class OnboardingService extends BaseService {
     constructor() {
         super(repository);
+        this._onboardingDocumentFileUrlColumnAvailable = null;
     }
 
     async getNextEmployeeId() {
@@ -67,15 +69,169 @@ class OnboardingService extends BaseService {
         return "";
     }
 
+    createDocumentUploadPayload(file, documentType) {
+        const normalizedType = String(documentType || "General").trim() || "General";
+        const fileUrl = `/uploads/onboarding-documents/${file.filename}`;
+
+        return {
+            documentType: normalizedType,
+            fileName: file.originalname || file.filename,
+            fileUrl,
+            file_url: fileUrl,
+            storedName: file.filename,
+            mimeType: file.mimetype || null,
+            size: file.size || null,
+        };
+    }
+
+    async ensureOnboardingInfoLink(cifid, transaction) {
+        const existingLink = await db.Onboarding.findOne({
+            where: { cifid },
+            transaction,
+        });
+
+        if (existingLink?.onboardinginfoid) {
+            return existingLink.onboardinginfoid;
+        }
+
+        const onboardingInfo = await db.OnboardingInfo.create(
+            {
+                cifid,
+            },
+            { transaction }
+        );
+
+        await this.upsertSectionRecord(
+            db.Onboarding,
+            { cifid },
+            {
+                cifid,
+                onboardinginfoid: onboardingInfo.onboardinginfoid,
+            },
+            transaction
+        );
+
+        return onboardingInfo.onboardinginfoid;
+    }
+
+    async ensureOnboardingBankLink(cifid, onboardinginfoid, transaction) {
+        const existingBank = await db.OnboardingBank.findOne({
+            where: { cifid },
+            order: [["bid", "DESC"]],
+            transaction,
+        });
+
+        if (existingBank?.bid) {
+            if (existingBank.onboardinginfoid !== onboardinginfoid) {
+                await existingBank.update({ onboardinginfoid }, { transaction });
+            }
+            return existingBank.bid;
+        }
+
+        const createdBank = await db.OnboardingBank.create(
+            {
+                cifid,
+                onboardinginfoid,
+                accountHolderName: "N/A",
+                accountNumber: "N/A",
+                ifscCode: "N/A",
+                bankName: "N/A",
+                branchName: null,
+            },
+            { transaction }
+        );
+
+        return createdBank.bid;
+    }
+
+    async saveUploadedDocument(cifid, file, documentType) {
+        const parsedCifId = Number(cifid);
+        if (!parsedCifId) {
+            throw new Error("Valid CIF ID is required to store document in database.");
+        }
+
+        return db.sequelize.transaction(async (transaction) => {
+            const uploadData = this.createDocumentUploadPayload(file, documentType);
+            const onboardinginfoid = await this.ensureOnboardingInfoLink(
+                parsedCifId,
+                transaction
+            );
+            const bid = await this.ensureOnboardingBankLink(
+                parsedCifId,
+                onboardinginfoid,
+                transaction
+            );
+
+            const supportsFileUrl = await this.onboardingDocumentSupportsFileUrl(transaction);
+
+            const existingDocument = await db.OnboardingDocument.findOne({
+                where: {
+                    cifid: parsedCifId,
+                    documentType: uploadData.documentType,
+                    fileName: uploadData.fileName,
+                },
+                transaction,
+            });
+
+            const payload = {
+                cifid: parsedCifId,
+                onboardinginfoid,
+                documentType: uploadData.documentType,
+                fileName: uploadData.fileName,
+                bid,
+            };
+
+            if (supportsFileUrl) {
+                payload.fileUrl = uploadData.fileUrl;
+            }
+
+            let savedDoc;
+            if (existingDocument) {
+                savedDoc = await existingDocument.update(payload, { transaction });
+            } else {
+                savedDoc = await db.OnboardingDocument.create(payload, { transaction });
+            }
+
+            return {
+                ...uploadData,
+                did: savedDoc?.did || null,
+                cifid: parsedCifId,
+                onboardinginfoid,
+            };
+        });
+    }
+
     sanitizeDocumentsForSnapshot(documents) {
         if (!Array.isArray(documents)) {
             return [];
         }
 
-        return documents.map((doc) => ({
-            documentType: doc?.documentType || doc?.type || "",
-            fileName: doc?.fileName || doc?.name || "",
-        }));
+        const uniqueDocuments = [];
+        const seen = new Set();
+
+        documents.forEach((doc) => {
+            const documentType = String(doc?.documentType || doc?.type || "").trim();
+            const fileName = String(doc?.fileName || doc?.name || "").trim();
+            const fileUrl = String(doc?.fileUrl || doc?.file_url || "").trim();
+
+            if (!fileName) {
+                return;
+            }
+
+            const key = `${documentType.toLowerCase()}::${fileName.toLowerCase()}`;
+            if (seen.has(key)) {
+                return;
+            }
+
+            seen.add(key);
+            uniqueDocuments.push({
+                documentType,
+                fileName,
+                fileUrl,
+            });
+        });
+
+        return uniqueDocuments;
     }
 
     buildSnapshotFormData(formData) {
@@ -91,6 +247,53 @@ class OnboardingService extends BaseService {
 
     hasText(value) {
         return Boolean(String(value || "").trim());
+    }
+
+    formatValidationSummary(errors) {
+        const labels = [...new Set(
+            errors
+                .map((item) => {
+                    if (!item) return "";
+                    const field = typeof item === "string" ? item : item?.field || "";
+                    if (!field) return "";
+
+                    return String(field)
+                        .replace(/^Employment Information: /, "")
+                        .replace(/^Address Section: /, "")
+                        .replace(/^Education Details: /, "")
+                        .replace(/^Experience Details: /, "")
+                        .replace(/^Basic Details: /, "")
+                        .replace(/^Icebreaker: /, "")
+                        .replace(/currentAddress\./g, "Current Address > ")
+                        .replace(/permanentAddress\./g, "Permanent Address > ")
+                        .replace(/reportingHead/g, "Reporting Head")
+                        .replace(/uanNumber/g, "UAN Number")
+                        .replace(/panNumber/g, "PAN Number")
+                        .replace(/currentSalary/g, "Current Salary")
+                        .replace(/education/g, "Education")
+                        .replace(/experience/g, "Experience")
+                        .replace(/line1/g, "Line 1")
+                        .replace(/city/g, "City")
+                        .replace(/state/g, "State")
+                        .replace(/pincode/g, "Pincode")
+                        .replace(/qualification/g, "Qualification")
+                        .replace(/institution/g, "Institution")
+                        .replace(/board/g, "Board / University")
+                        .replace(/year/g, "Year")
+                        .replace(/percentage/g, "Percentage")
+                        .replace(/company/g, "Company")
+                        .replace(/designation/g, "Designation")
+                        .replace(/startDate/g, "Start Date")
+                        .replace(/totalExp/g, "Total Experience")
+                        .replace(/\./g, " > ")
+                        .replace(/\s+>\s+/g, " > ")
+                        .replace(/\s+/g, " ")
+                        .trim();
+                })
+                .filter(Boolean)
+        )];
+
+        return labels.length > 0 ? labels.join(", ") : "required fields";
     }
 
     validateFinalFormData(formData) {
@@ -210,11 +413,14 @@ class OnboardingService extends BaseService {
         });
 
         if (errors.length > 0) {
-            throw new Error(
-                `FINAL submission validation failed. Missing/invalid fields: ${errors.join(
-                    ", "
-                )}`
+            const summary = this.formatValidationSummary(errors);
+            const error = new Error(
+                `FINAL submission validation failed. Missing required fields: ${summary}`
             );
+            error.status = 400;
+            error.code = "ONBOARDING_FINAL_VALIDATION_FAILED";
+            error.errors = errors.map((field) => ({ field, message: "Required" }));
+            throw error;
         }
     }
 
@@ -346,6 +552,71 @@ class OnboardingService extends BaseService {
             message.includes("doesn't exist") ||
             message.includes("no such table")
         );
+    }
+
+    isMissingFileUrlColumnError(error) {
+        const message = String(error?.message || "").toLowerCase();
+        return (
+            error?.original?.code === "ER_BAD_FIELD_ERROR" &&
+            message.includes("unknown column") &&
+            message.includes("file_url")
+        );
+    }
+
+    async onboardingDocumentSupportsFileUrl(transaction) {
+        if (typeof this._onboardingDocumentFileUrlColumnAvailable === "boolean") {
+            return this._onboardingDocumentFileUrlColumnAvailable;
+        }
+
+        try {
+            const rows = await db.sequelize.query(
+                "SHOW COLUMNS FROM onboarding_documents LIKE 'file_url'",
+                {
+                    type: QueryTypes.SELECT,
+                    transaction,
+                }
+            );
+            this._onboardingDocumentFileUrlColumnAvailable = rows.length > 0;
+            return this._onboardingDocumentFileUrlColumnAvailable;
+        } catch (error) {
+            if (this.isMissingTableError(error)) {
+                this._onboardingDocumentFileUrlColumnAvailable = false;
+                return false;
+            }
+
+            throw error;
+        }
+    }
+
+    async getOnboardingDocumentRows(cifid, transaction) {
+        try {
+            return await db.OnboardingDocument.findAll({ where: { cifid }, transaction });
+        } catch (error) {
+            if (this.isMissingFileUrlColumnError(error)) {
+                this._onboardingDocumentFileUrlColumnAvailable = false;
+                return db.OnboardingDocument.findAll({
+                    where: { cifid },
+                    transaction,
+                    attributes: [
+                        "did",
+                        "cifid",
+                        "onboardinginfoid",
+                        "documentType",
+                        "fileName",
+                        "bid",
+                        "createdAt",
+                        "updatedAt",
+                        "deletedAt",
+                    ],
+                });
+            }
+
+            if (this.isMissingTableError(error)) {
+                return [];
+            }
+
+            throw error;
+        }
     }
 
     async getOnboardingEducationRows(cifid) {
@@ -570,23 +841,79 @@ class OnboardingService extends BaseService {
             transaction
         );
 
-        const docs = Array.isArray(formData.documents) ? formData.documents : [];
-        await db.OnboardingDocument.destroy({ where: { cifid }, transaction });
+        const docs = this.sanitizeDocumentsForSnapshot(formData.documents).map((doc) => ({
+            documentType: doc.documentType || "General",
+            fileName: doc.fileName,
+            fileUrl: doc.fileUrl || "",
+        }));
 
-        if (docs.length > 0) {
-            const rows = docs
-                .map((doc) => ({
-                    cifid,
+        const supportsFileUrl = await this.onboardingDocumentSupportsFileUrl(transaction);
+        const existingDocumentsInTx = await this.getOnboardingDocumentRows(
+            cifid,
+            transaction
+        );
+
+        const existingByKey = new Map(
+            existingDocumentsInTx.map((doc) => [
+                `${String(doc.documentType || "").trim().toLowerCase()}::${String(
+                    doc.fileName || ""
+                )
+                    .trim()
+                    .toLowerCase()}`,
+                doc,
+            ])
+        );
+
+        const incomingKeys = new Set();
+        for (const doc of docs) {
+            const key = `${doc.documentType.toLowerCase()}::${doc.fileName.toLowerCase()}`;
+            incomingKeys.add(key);
+
+            const existingDoc = existingByKey.get(key);
+            if (existingDoc) {
+                const updatePayload = {
                     onboardinginfoid: onboardingInfo.onboardinginfoid,
-                    documentType: doc?.documentType || doc?.type || "General",
-                    fileName: doc?.fileName || doc?.name || "uploaded-file",
                     bid: bankRecord?.bid || null,
-                }))
-                .filter((row) => row.fileName);
+                };
+                if (supportsFileUrl) {
+                    updatePayload.fileUrl = doc.fileUrl || existingDoc.fileUrl || null;
+                }
 
-            if (rows.length > 0) {
-                await db.OnboardingDocument.bulkCreate(rows, { transaction });
+                await existingDoc.update(
+                    updatePayload,
+                    { transaction }
+                );
+                continue;
             }
+
+            const createPayload = {
+                cifid,
+                onboardinginfoid: onboardingInfo.onboardinginfoid,
+                documentType: doc.documentType,
+                fileName: doc.fileName,
+                bid: bankRecord?.bid || null,
+            };
+            if (supportsFileUrl) {
+                createPayload.fileUrl = doc.fileUrl || null;
+            }
+
+            await db.OnboardingDocument.create(
+                createPayload,
+                { transaction }
+            );
+        }
+
+        const documentsToDelete = existingDocumentsInTx.filter((doc) => {
+            const key = `${String(doc.documentType || "").trim().toLowerCase()}::${String(
+                doc.fileName || ""
+            )
+                .trim()
+                .toLowerCase()}`;
+            return !incomingKeys.has(key);
+        });
+
+        for (const doc of documentsToDelete) {
+            await doc.destroy({ transaction });
         }
     }
 
@@ -897,7 +1224,7 @@ class OnboardingService extends BaseService {
             this.getOnboardingExperienceRows(parsedCifId),
             db.CifAcademic.findAll({ where: { cifid: parsedCifId } }),
             db.CifExperience.findAll({ where: { cifid: parsedCifId } }),
-            db.OnboardingDocument.findAll({ where: { cifid: parsedCifId } }),
+            this.getOnboardingDocumentRows(parsedCifId),
         ]);
 
         if (!record && !onboardingInfo) {
@@ -1129,6 +1456,8 @@ class OnboardingService extends BaseService {
                     ? documentRows.map((doc) => ({
                           documentType: doc.documentType || "",
                           fileName: doc.fileName || "",
+                          fileUrl: doc.fileUrl || "",
+                          file_url: doc.fileUrl || "",
                       }))
                     : existingData.documents || [],
             officeTour: {

@@ -601,6 +601,7 @@ CREATE TABLE `onboarding_documents` (
   `onboardinginfoid` int(11) NOT NULL,
   `documentType` varchar(100) NOT NULL,
   `fileName` varchar(255) NOT NULL,
+  `file_url` varchar(512) DEFAULT NULL,
   `bid` int(11) NOT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,

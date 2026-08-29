@@ -35,6 +35,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(255),
                 allowNull: false,
             },
+            fileUrl: {
+                type: DataTypes.STRING(512),
+                allowNull: true,
+                field: "file_url",
+            },
             bid: {
                 type: DataTypes.INTEGER,
                 allowNull: true,
