@@ -15,7 +15,7 @@ const asyncHandler = require("../helpers/asyncHandler");
 
 // Create full submission
 exports.create = asyncHandler(async (req, res) => {
-  const { 
+  let { 
     personal, 
     academics, 
     experiences, 
@@ -24,6 +24,18 @@ exports.create = asyncHandler(async (req, res) => {
     languages, 
     references 
   } = req.body;
+
+  try {
+    if (typeof personal === 'string') personal = JSON.parse(personal);
+    if (typeof academics === 'string') academics = JSON.parse(academics);
+    if (typeof experiences === 'string') experiences = JSON.parse(experiences);
+    if (typeof skills === 'string') skills = JSON.parse(skills);
+    if (typeof softwares === 'string') softwares = JSON.parse(softwares);
+    if (typeof languages === 'string') languages = JSON.parse(languages);
+    if (typeof references === 'string') references = JSON.parse(references);
+  } catch (err) {
+    return ApiResponse.error(res, "Invalid JSON data in form fields", 400);
+  }
 
   // Start transaction
   const sequelize = require("../model").sequelize;

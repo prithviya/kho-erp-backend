@@ -21,6 +21,11 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: "DRAFT",
             },
+            formData: {
+                type: DataTypes.JSON,
+                allowNull: false,
+                defaultValue: {},
+            },
             experienceDetails: {
                 type: DataTypes.JSON,
                 allowNull: false,

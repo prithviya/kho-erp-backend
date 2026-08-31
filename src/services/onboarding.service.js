@@ -13,8 +13,32 @@ class OnboardingService extends BaseService {
         const maxEmployeeId = await db.Employee.max("id", {
             paranoid: false,
         });
+        
+        let maxKho = 0;
+        
+        // Also check existing employees for KHO-XXX max number
+        const employees = await db.Employee.findAll({ attributes: ['employeeCode'], paranoid: false });
+        employees.forEach(emp => {
+            if (emp.employeeCode && emp.employeeCode.startsWith('KHO-')) {
+                const num = parseInt(emp.employeeCode.replace('KHO-', ''), 10);
+                if (!isNaN(num) && num > maxKho) {
+                    maxKho = num;
+                }
+            }
+        });
 
-        const nextNumber = Number(maxEmployeeId || 0) + 1;
+        // Also check onboard_info
+        const onboardings = await db.OnboardingInfo.findAll({ attributes: ['employeeId'], paranoid: false });
+        onboardings.forEach(ob => {
+            if (ob.employeeId && ob.employeeId.startsWith('KHO-')) {
+                const num = parseInt(ob.employeeId.replace('KHO-', ''), 10);
+                if (!isNaN(num) && num > maxKho) {
+                    maxKho = num;
+                }
+            }
+        });
+
+        const nextNumber = Math.max(Number(maxEmployeeId || 0), maxKho) + 1;
         return `KHO-${String(nextNumber).padStart(3, "0")}`;
     }
 

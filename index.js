@@ -78,6 +78,10 @@ const uploadsPath = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 
 if (fs.existsSync(uploadsPath)) {
     app.use("/uploads", express.static(uploadsPath));
 }
+const assetsPath = path.join(__dirname, "assets");
+if (fs.existsSync(assetsPath)) {
+    app.use("/assets", express.static(assetsPath));
+}
 if (fs.existsSync(buildPath)) {
     logger.info("✅ React build detected");
     app.use(express.static(buildPath));
