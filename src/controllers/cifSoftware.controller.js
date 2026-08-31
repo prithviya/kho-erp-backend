@@ -33,8 +33,9 @@ exports.getById = asyncHandler(async (req, res) => {
 });
 
 exports.getByCifId = asyncHandler(async (req, res) => {
+    const candidateId = req.params.candidateId || req.params.cifid;
     const software = await cifSoftware.getByCifId(
-        req.params.cifid
+        candidateId
     );
 
     return ApiResponse.success(

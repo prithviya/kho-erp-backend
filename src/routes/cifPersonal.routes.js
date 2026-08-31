@@ -3,6 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const controller = require("../controllers/cifPersonal.controller");
+const authMiddleware = require("../middleware/auth.middleware");
+const { requireAnyRole } = require("../middleware/roleAccess.middleware");
+
+router.use(authMiddleware, requireAnyRole(["hr"]));
 
 router.post("/", controller.create);
 

@@ -9,20 +9,14 @@ module.exports = (sequelize, DataTypes) => {
             },
             cifid: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
-                references: {
-                    model: "cif_personals",
-                    key: "cifid",
-                },
+                allowNull: false,
             },
             officialemail: {
-                type: DataTypes.STRING,
-                unique: true,
+                type: DataTypes.STRING(255),
                 allowNull: true,
             },
             officialphone: {
-                type: DataTypes.STRING,
-                unique: true,
+                type: DataTypes.STRING(255),
                 allowNull: true,
             },
             doj: {
@@ -42,21 +36,15 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true,
             },
             department: {
-                type: DataTypes.STRING(100),
-                allowNull: true,
+                type: DataTypes.INTEGER,
+                allowNull: false,
             },
-
             designation: {
                 type: DataTypes.STRING(100),
                 allowNull: true,
             },
-
             reportHead: {
                 type: DataTypes.STRING(50),
-                allowNull: true,
-            },
-            photo: {
-                type: DataTypes.STRING(255),
                 allowNull: true,
             },
             uanno: {
@@ -77,21 +65,12 @@ module.exports = (sequelize, DataTypes) => {
             },
             eid: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
-                references: {
-                    model: "cif_experiences",
-                    key: "eid",
-                },
+                allowNull: false,
             },
             academicid: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
-                references: {
-                    model: "cif_academics",
-                    key: "academicid",
-                },
+                allowNull: false,
             },
-
             employeeId: {
                 type: DataTypes.STRING(30),
                 allowNull: true,
@@ -148,7 +127,6 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(120),
                 allowNull: true,
             },
-
             currentAddressLine1: {
                 type: DataTypes.STRING(255),
                 allowNull: true,
@@ -189,7 +167,6 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(20),
                 allowNull: true,
             },
-
             favoriteCake: {
                 type: DataTypes.STRING(120),
                 allowNull: true,
@@ -237,5 +214,6 @@ module.exports = (sequelize, DataTypes) => {
             paranoid: true,
         }
     );
+
     return OnboardingInfo;
 };

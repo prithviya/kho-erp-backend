@@ -7,8 +7,6 @@ class CifPersonalService extends BaseService {
     }
 
     async create(data) {
-        console.log('data: ',data);
-        
         if (!data.fullName) {
             throw new Error("Full name is required.");
         }

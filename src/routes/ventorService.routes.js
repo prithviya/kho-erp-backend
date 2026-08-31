@@ -2,9 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const ventorServiceService = require("../services/ventorService.service");
+const authMiddleware = require("../middleware/auth.middleware");
+const { requireAnyRole } = require("../middleware/roleAccess.middleware");
 
 // Create vendor service
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const data = await ventorServiceService.createService(req.body);
 
@@ -24,7 +26,7 @@ router.post("/", async (req, res) => {
 });
 
 // Get all vendor services
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const data =
             await ventorServiceService.getAllServices();
@@ -45,7 +47,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get vendor services by vendor ID
-router.get("/vendor/:vid", async (req, res) => {
+router.get("/vendor/:vid", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const { vid } = req.params;
 
@@ -71,7 +73,7 @@ router.get("/vendor/:vid", async (req, res) => {
 });
 
 // Get vendor service by ID
-router.get("/:vserid", async (req, res) => {
+router.get("/:vserid", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const { vserid } = req.params;
 
@@ -101,7 +103,7 @@ router.get("/:vserid", async (req, res) => {
 });
 
 // Update vendor service
-router.put("/:vserid", async (req, res) => {
+router.put("/:vserid", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const { vserid } = req.params;
 
@@ -134,7 +136,7 @@ router.put("/:vserid", async (req, res) => {
 });
 
 // Delete vendor service
-router.delete("/:vserid", async (req, res) => {
+router.delete("/:vserid", authMiddleware, requireAnyRole(["manager"]), async (req, res) => {
     try {
         const { vserid } = req.params;
 

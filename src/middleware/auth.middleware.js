@@ -1,7 +1,8 @@
 // Authentication middleware to verify JWT tokens and user status
 const jwt = require("jsonwebtoken");
-const { User } = require("../model");
+const { User, Role } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
+const { normalizeRole } = require("./roleAccess.middleware");
 const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -20,7 +21,16 @@ const authenticate = async (req, res, next) => {
             token,
             process.env.JWT_SECRET
         );
-        const user = await User.findByPk(decoded.id);
+        const user = await User.findByPk(decoded.id, {
+            include: [
+                {
+                    model: Role,
+                    as: "roles",
+                    attributes: ["id", "name", "code"],
+                    through: { attributes: [] },
+                },
+            ],
+        });
         if (!user) {
             return ApiResponse.unauthorized(
                 res,
@@ -33,10 +43,19 @@ const authenticate = async (req, res, next) => {
                 "User account is inactive."
             );
         }
+        const roleSet = new Set();
+        (user.roles || []).forEach((role) => {
+            roleSet.add(normalizeRole(role.code));
+            roleSet.add(normalizeRole(role.name));
+        });
+
         req.user = {
             id: user.id,
             email: user.email,
-            firstName: user.firstName
+            firstName: user.firstName,
+            roles: user.roles || [],
+            roleSet,
+            isSuperAdmin: roleSet.has("superadmin"),
         };
         next();
     } catch (error) {

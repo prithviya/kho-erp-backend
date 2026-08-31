@@ -6,10 +6,14 @@ class CifAcademicRepository extends BaseRepository {
         super(CifAcademic);
     }
 
-    async findByCifId(cifid) {
+    async findByCandidateId(candidateId) {
         return await this.model.findAll({
-            where: { cifid },
+            where: { candidateId },
         });
+    }
+
+    async findByCifId(cifid) {
+        return this.findByCandidateId(cifid);
     }
 }
 

@@ -118,45 +118,62 @@ db.Department = require("./department.model")(
 |--------------------------------------------------------------------------
 */
 
-db.CifPersonal = require("./cifPersonal.model")(
+db.Candidate = require("./candidate.model")(
     sequelize,
     DataTypes
 );
 
-db.CifAcademic = require("./cifAcademic.model")(
+db.CandidateAcademic = require("./candidateAcademic.model")(
     sequelize,
     DataTypes
 );
 
-db.CifExperience = require("./cifExperience.model")(
+db.CandidateExperience = require("./candidateExperience.model")(
     sequelize,
     DataTypes
 );
 
-db.CifLanguage = require("./cifLanguage.model")(
+db.CandidateLanguage = require("./candidateLanguage.model")(
     sequelize,
     DataTypes
 );
 
-db.CifReference = require("./cifReference.model")(
+db.CandidateReference = require("./candidateReference.model")(
     sequelize,
     DataTypes
 );
 
-db.CifSkill = require("./cifSkill.model")(
+db.CandidateSkill = require("./candidateSkill.model")(
     sequelize,
     DataTypes
 );
 
-db.CifSoftware = require("./cifSoftware.model")(
+db.CandidateSoftware = require("./candidateSoftware.model")(
     sequelize,
     DataTypes
 );
 
-db.CifSubmission = require("./cifSubmission.model")(
+db.CandidateDocument = require("./candidateDocument.model")(
     sequelize,
     DataTypes
 );
+
+db.JobApplication = require("./jobApplication.model")(
+    sequelize,
+    DataTypes
+);
+
+// Legacy compatibility aliases
+
+db.CifPersonal = db.Candidate;
+db.CifAcademic = db.CandidateAcademic;
+db.CifExperience = db.CandidateExperience;
+db.CifLanguage = db.CandidateLanguage;
+db.CifReference = db.CandidateReference;
+db.CifSkill = db.CandidateSkill;
+db.CifSoftware = db.CandidateSoftware;
+db.CifSubmission = db.JobApplication;
+
 /*
 |--------------------------------------------------------------------------
 | ONBOARDING MODELS
@@ -168,7 +185,17 @@ db.Onboarding = require("./onboarding.model")(
     DataTypes
 );
 
-db.OnboardingInfo = require("./onboardinginfo.model")(
+db.OnboardingRecord = require("./onboardingRecord.model")(
+    sequelize,
+    DataTypes
+);
+
+db.OnboardingEducation = require("./onboardingEducation.model")(
+    sequelize,
+    DataTypes
+);
+
+db.OnboardingExperience = require("./onboardingExperience.model")(
     sequelize,
     DataTypes
 );
@@ -199,21 +226,6 @@ db.OnboardInduction = require("./onboardInduction.model")(
 );
 
 db.OnboardingOffice = require("./onboardingOfficeTour")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingEducation = require("./onboardingEducation.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingExperience = require("./onboardingExperience.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingRecord =  require("./onboardingRecord.model")(
     sequelize,
     DataTypes
 );
@@ -251,6 +263,21 @@ db.ProjectAssignment = require("./projectAssignment.model")(
 );
 
 db.Employee = require("./employee.model")(
+    sequelize,
+    DataTypes
+);
+
+db.Payroll = require("./payroll.model")(
+    sequelize,
+    DataTypes
+);
+
+db.LeaveCategory = require("./leaveCategory.model")(
+    sequelize,
+    DataTypes
+);
+
+db.LeaveRequest = require("./leaveRequest.model")(
     sequelize,
     DataTypes
 );
@@ -493,6 +520,56 @@ db.User.hasMany(db.Employee, {
     as: "createdEmployees",
 });
 
+db.Employee.hasMany(db.Payroll, {
+    foreignKey: "employeeId",
+    as: "payrolls",
+});
+
+db.Payroll.belongsTo(db.Employee, {
+    foreignKey: "employeeId",
+    as: "employee",
+});
+
+db.User.hasMany(db.Payroll, {
+    foreignKey: "createdBy",
+    as: "createdPayrolls",
+});
+
+db.Payroll.belongsTo(db.User, {
+    foreignKey: "createdBy",
+    as: "creator",
+});
+
+db.LeaveCategory.hasMany(db.LeaveRequest, {
+    foreignKey: "categoryId",
+    as: "requests",
+});
+
+db.LeaveRequest.belongsTo(db.LeaveCategory, {
+    foreignKey: "categoryId",
+    as: "category",
+});
+
+db.User.hasMany(db.LeaveRequest, {
+    foreignKey: "userId",
+    as: "leaveRequests",
+});
+
+db.LeaveRequest.belongsTo(db.User, {
+    foreignKey: "userId",
+    as: "requester",
+});
+
+db.User.hasMany(db.LeaveRequest, {
+    foreignKey: "approverId",
+    as: "approvedLeaveRequests",
+});
+
+db.LeaveRequest.belongsTo(db.User, {
+    foreignKey: "approverId",
+    as: "approver",
+});
+
 
 db.Opening.belongsTo(db.Department, {
     foreignKey: "departmentId",
@@ -512,141 +589,174 @@ db.Department.hasMany(db.Opening, {
 |--------------------------------------------------------------------------
 */
 
-// Personal -> Academic
-db.CifPersonal.hasMany(db.CifAcademic, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> Academic
+db.Candidate.hasMany(db.CandidateAcademic, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "academics",
 });
 
-db.CifAcademic.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateAcademic.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-
-// Personal -> Experience
-db.CifPersonal.hasMany(db.CifExperience, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> Experience
+db.Candidate.hasMany(db.CandidateExperience, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "experiences",
 });
 
-db.CifExperience.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateExperience.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-
-// Personal -> Language
-db.CifPersonal.hasMany(db.CifLanguage, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> Language
+db.Candidate.hasMany(db.CandidateLanguage, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "languages",
 });
 
-db.CifLanguage.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateLanguage.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-
-// Personal -> Software
-db.CifPersonal.hasMany(db.CifSoftware, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> Software
+db.Candidate.hasMany(db.CandidateSoftware, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "softwares",
 });
 
-db.CifSoftware.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateSoftware.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-
-// Personal -> Skills
-db.CifPersonal.hasMany(db.CifSkill, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> Skills
+db.Candidate.hasMany(db.CandidateSkill, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "skills",
 });
 
-db.CifSkill.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateSkill.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-
-// Personal -> Reference
-db.CifPersonal.hasMany(db.CifReference, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+// Candidate -> References
+db.Candidate.hasMany(db.CandidateReference, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "references",
 });
 
-db.CifReference.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.CandidateReference.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-// ============================================================
-// CIF PERSONAL -> SUBMISSION
-// ============================================================
+// Candidate -> Documents
+db.Candidate.hasMany(db.CandidateDocument, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
+    as: "documents",
+});
 
-db.CifPersonal.hasOne(db.CifSubmission, {
-    foreignKey: "cifid",
-    sourceKey: "cifid",
+db.CandidateDocument.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
+});
+
+// Candidate -> Job Applications
+db.Candidate.hasMany(db.JobApplication, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
+    as: "jobApplications",
+});
+
+// Legacy compatibility alias for older CIF submission queries
+db.Candidate.hasMany(db.JobApplication, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
     as: "submission",
 });
 
-db.CifSubmission.belongsTo(db.CifPersonal, {
-    foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+db.JobApplication.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
 });
 
-// ============================================================
-// CIF PERSONAL -> OPENING
-// ============================================================
-
-db.CifPersonal.belongsTo(db.Opening, {
+// Candidate -> Opening
+db.Candidate.belongsTo(db.Opening, {
     foreignKey: "appliedPosition",
     targetKey: "jobid",
     as: "opening",
 });
 
-db.Opening.hasMany(db.CifPersonal, {
+db.Opening.hasMany(db.Candidate, {
     foreignKey: "appliedPosition",
     sourceKey: "jobid",
     as: "applications",
 });
 
-// ============================================================
-// CIF PERSONAL -> RECRUITMENT
-// ============================================================
+// Job Application -> Onboarding
 
-db.CifPersonal.hasOne(db.Recruitment, {
+db.JobApplication.hasOne(db.Onboarding, {
+    foreignKey: "jobApplicationId",
+    sourceKey: "id",
+    as: "onboarding",
+});
+
+db.Onboarding.belongsTo(db.JobApplication, {
+    foreignKey: "jobApplicationId",
+    targetKey: "id",
+    as: "jobApplication",
+});
+
+// Candidate -> Onboarding
+db.Candidate.hasOne(db.Onboarding, {
+    foreignKey: "candidateId",
+    sourceKey: "id",
+    as: "onboarding",
+});
+
+db.Onboarding.belongsTo(db.Candidate, {
+    foreignKey: "candidateId",
+    targetKey: "id",
+    as: "candidate",
+});
+
+// Candidate -> Recruitment
+db.Candidate.hasOne(db.Recruitment, {
     foreignKey: "cifid",
-    sourceKey: "cifid",
+    sourceKey: "id",
     as: "recruitment",
 });
 
-db.CifPersonal.hasMany(db.Recruitment, {
+db.Candidate.hasMany(db.Recruitment, {
     foreignKey: "cifid",
-    sourceKey: "cifid",
+    sourceKey: "id",
     as: "recruitmentHistory",
 });
 
-db.Recruitment.belongsTo(db.CifPersonal, {
+db.Recruitment.belongsTo(db.Candidate, {
     foreignKey: "cifid",
-    targetKey: "cifid",
-    as: "Personal",
+    targetKey: "id",
+    as: "candidate",
 });
 
 

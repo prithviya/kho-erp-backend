@@ -1,29 +1,40 @@
 const BaseService = require("./base.service");
 const repository = require("../repository/cifExperience.repository");
 
+function normalizeCandidateId(data = {}) {
+    const candidateId = Number(data.candidateId || data.cifid || 0);
+    if (!candidateId) {
+        throw new Error("candidateId is required.");
+    }
+
+    return {
+        ...data,
+        candidateId,
+        cifid: candidateId,
+    };
+}
+
 class CifExperienceService extends BaseService {
     constructor() {
         super(repository);
     }
 
     async create(data) {
-        if (!data.cifid) {
-            throw new Error("CIF ID is required.");
-        }
+        const payload = normalizeCandidateId(data);
 
-        if (!data.companyName) {
+        if (!payload.companyName) {
             throw new Error("Company name is required.");
         }
 
-        if (!data.role) {
+        if (!payload.role) {
             throw new Error("Role is required.");
         }
 
-        if (!data.startDate) {
+        if (!payload.startDate) {
             throw new Error("Start date is required.");
         }
 
-        return await super.create(data);
+        return await super.create(payload);
     }
 
     async getAll() {
@@ -40,8 +51,12 @@ class CifExperienceService extends BaseService {
         return experience;
     }
 
+    async getByCandidateId(candidateId) {
+        return await repository.findByCandidateId(candidateId);
+    }
+
     async getByCifId(cifid) {
-        return await repository.findByCifId(cifid);
+        return this.getByCandidateId(cifid);
     }
 
     async update(id, data) {

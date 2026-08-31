@@ -10,35 +10,44 @@ class OnboardingService extends BaseService {
     }
 
     async getNextEmployeeId() {
-        const maxEmployeeId = await db.Employee.max("id", {
-            paranoid: false,
-        });
-        
-        let maxKho = 0;
-        
-        // Also check existing employees for KHO-XXX max number
-        const employees = await db.Employee.findAll({ attributes: ['employeeCode'], paranoid: false });
-        employees.forEach(emp => {
-            if (emp.employeeCode && emp.employeeCode.startsWith('KHO-')) {
-                const num = parseInt(emp.employeeCode.replace('KHO-', ''), 10);
-                if (!isNaN(num) && num > maxKho) {
-                    maxKho = num;
-                }
-            }
-        });
+        const collectMaxFromCode = (rawCode, maxValue) => {
+            const match = String(rawCode || "")
+                .trim()
+                .toUpperCase()
+                .match(/^KHO-(\d+)$/);
 
-        // Also check onboard_info
-        const onboardings = await db.OnboardingInfo.findAll({ attributes: ['employeeId'], paranoid: false });
-        onboardings.forEach(ob => {
-            if (ob.employeeId && ob.employeeId.startsWith('KHO-')) {
-                const num = parseInt(ob.employeeId.replace('KHO-', ''), 10);
-                if (!isNaN(num) && num > maxKho) {
-                    maxKho = num;
-                }
-            }
-        });
+            if (!match) return maxValue;
 
-        const nextNumber = Math.max(Number(maxEmployeeId || 0), maxKho) + 1;
+            const num = Number.parseInt(match[1], 10);
+            if (!Number.isNaN(num) && num > maxValue) {
+                return num;
+            }
+
+            return maxValue;
+        };
+
+        const [employees, onboardings, onboardingInfos] = await Promise.all([
+            db.Employee.findAll({ attributes: ["employeeCode"], paranoid: false }),
+            db.Onboarding.findAll({ attributes: ["employeeCode"], paranoid: false }),
+            db.OnboardingInfo.findAll({ attributes: ["employeeId"], paranoid: false }),
+        ]);
+
+        const getMaxKho = (rows, fieldName) =>
+            rows.reduce(
+                (maxValue, row) => collectMaxFromCode(row[fieldName], maxValue),
+                0
+            );
+
+        // Primary source: employee master. Fallback to onboarding snapshots only when no employee code exists.
+        let maxKho = getMaxKho(employees, "employeeCode");
+        if (maxKho === 0) {
+            maxKho = Math.max(
+                getMaxKho(onboardings, "employeeCode"),
+                getMaxKho(onboardingInfos, "employeeId")
+            );
+        }
+
+        const nextNumber = maxKho + 1;
         return `KHO-${String(nextNumber).padStart(3, "0")}`;
     }
 
@@ -168,6 +177,42 @@ class OnboardingService extends BaseService {
         return createdBank.bid;
     }
 
+    async validateCandidateEligibleForOnboarding(cifid, transaction) {
+        const parsedCifId = Number(cifid);
+        if (!parsedCifId) {
+            throw new Error("Valid CIF ID is required for onboarding.");
+        }
+
+        const [recruitment, application] = await Promise.all([
+            db.Recruitment.findOne({
+                where: { cifid: parsedCifId },
+                order: [["updatedAt", "DESC"]],
+                transaction,
+            }),
+            db.CifSubmission.findOne({
+                where: { candidateId: parsedCifId },
+                order: [["updatedAt", "DESC"]],
+                transaction,
+            }),
+        ]);
+
+        const recruitmentStatus = String(recruitment?.recruitmentStatus || "")
+            .trim()
+            .toLowerCase();
+        const applicationStatus = String(application?.status || "")
+            .trim()
+            .toUpperCase();
+
+        const isSelectedFromRecruitment = recruitmentStatus === "selected";
+        const isSelectedFromApplication = ["OFFERED", "JOINED", "SHORTLISTED"].includes(
+            applicationStatus
+        );
+
+        if (!isSelectedFromRecruitment && !isSelectedFromApplication) {
+            throw new Error("Candidate must be selected before onboarding can start.");
+        }
+    }
+
     async saveUploadedDocument(cifid, file, documentType) {
         const parsedCifId = Number(cifid);
         if (!parsedCifId) {
@@ -175,6 +220,8 @@ class OnboardingService extends BaseService {
         }
 
         return db.sequelize.transaction(async (transaction) => {
+            await this.validateCandidateEligibleForOnboarding(parsedCifId, transaction);
+
             const uploadData = this.createDocumentUploadPayload(file, documentType);
             const onboardinginfoid = await this.ensureOnboardingInfoLink(
                 parsedCifId,
@@ -945,6 +992,35 @@ class OnboardingService extends BaseService {
         const cifid = Number(payload?.cifid);
         const status = this.normalizeStatus(payload?.status);
         const formData = payload?.formData || {};
+
+        if (status === "FINAL") {
+            const officialEmail = String(
+                formData.officialEmail || formData.personalEmail || ""
+            )
+                .trim()
+                .toLowerCase();
+
+            if (officialEmail) {
+                const existingEmployeeByEmail = await db.Employee.findOne({
+                    where: { email: officialEmail },
+                    paranoid: false,
+                });
+
+                if (existingEmployeeByEmail?.employeeCode) {
+                    formData.employeeId = existingEmployeeByEmail.employeeCode;
+                }
+            }
+
+            if (!String(formData.employeeId || "").trim()) {
+                formData.employeeId = await this.getNextEmployeeId();
+            }
+        }
+
+        if (cifid) {
+            await db.sequelize.transaction(async (transaction) => {
+                await this.validateCandidateEligibleForOnboarding(cifid, transaction);
+            });
+        }
         const snapshotFormData = this.buildSnapshotFormData(formData);
         const experienceDetails = Array.isArray(formData.experience)
             ? formData.experience
@@ -1195,66 +1271,75 @@ class OnboardingService extends BaseService {
             }
 
             if (status === "FINAL") {
-                const employeeCode = String(formData.employeeId || "").trim();
-                const officialEmail = String(formData.officialEmail || formData.personalEmail || personal.email).trim();
-                
-                if (employeeCode) {
-                    const [skills, softwares, languages, references, docs] = await Promise.all([
-                        db.CifSkill.findAll({ where: { cifid }, transaction }),
-                        db.CifSoftware.findAll({ where: { cifid }, transaction }),
-                        db.CifLanguage.findAll({ where: { cifid }, transaction }),
-                        db.CifReference.findAll({ where: { cifid }, transaction }),
-                        this.getOnboardingDocumentRows(cifid, transaction)
-                    ]);
-                    
-                    let resumeData = {};
-                    if (docs && docs.length > 0) {
-                        const resumeDoc = docs.find(d => d.documentType && d.documentType.toLowerCase().includes('resume'));
-                        if (resumeDoc) {
-                            resumeData = {
-                                resumeOriginalName: resumeDoc.fileName,
-                                resumeStoredName: resumeDoc.fileName,
-                                portfolioLink: resumeDoc.fileUrl || resumeDoc.file_url || null
-                            };
-                        }
+                const officialEmail = String(
+                    formData.officialEmail || formData.personalEmail || personal.email
+                )
+                    .trim()
+                    .toLowerCase();
+
+                let existingEmployee = await db.Employee.findOne({
+                    where: { email: officialEmail },
+                    transaction,
+                    paranoid: false,
+                });
+
+                const employeeCode = existingEmployee?.employeeCode
+                    ? String(existingEmployee.employeeCode).trim()
+                    : String(formData.employeeId || "").trim();
+
+                const [skills, softwares, languages, references, docs] = await Promise.all([
+                    db.CifSkill.findAll({ where: { cifid }, transaction }),
+                    db.CifSoftware.findAll({ where: { cifid }, transaction }),
+                    db.CifLanguage.findAll({ where: { cifid }, transaction }),
+                    db.CifReference.findAll({ where: { cifid }, transaction }),
+                    this.getOnboardingDocumentRows(cifid, transaction)
+                ]);
+
+                let resumeData = {};
+                if (docs && docs.length > 0) {
+                    const resumeDoc = docs.find(d => d.documentType && d.documentType.toLowerCase().includes('resume'));
+                    if (resumeDoc) {
+                        resumeData = {
+                            resumeOriginalName: resumeDoc.fileName,
+                            resumeStoredName: resumeDoc.fileName,
+                            portfolioLink: resumeDoc.fileUrl || resumeDoc.file_url || null
+                        };
                     }
+                }
 
-                    const employeePayload = {
-                        employeeCode,
-                        jobPosition: String(formData.designation || "Employee").trim(),
-                        fullName: fullName || personal.fullName || "Employee",
-                        email: officialEmail || `emp-${employeeCode}@local.invalid`,
-                        phone: String(formData.officePhone || formData.personalPhone || personal.phoneNumber).trim() || "N/A",
-                        dateOfBirth: formData.dateOfBirth || personal.DOB || null,
-                        city: currentAddress.city || personal.city || null,
-                        pinCode: currentAddress.pincode || personal.pinCode || null,
-                        gender,
-                        ...resumeData,
-                        education: educationDetails || [],
-                        workExperience: experienceDetails || [],
-                        skills: skills.map(s => s.toJSON()),
-                        softwareTools: softwares.map(s => s.toJSON()),
-                        languages: languages.map(l => l.toJSON()),
-                        references: references.map(r => r.toJSON()),
-                        consent: true,
-                        status: "Active"
-                    };
+                const employeePayload = {
+                    employeeCode,
+                    jobPosition: String(formData.designation || "Employee").trim(),
+                    fullName: fullName || personal.fullName || "Employee",
+                    email: officialEmail || `emp-${employeeCode}@local.invalid`,
+                    phone: String(formData.officePhone || formData.personalPhone || personal.phoneNumber).trim() || "N/A",
+                    dateOfBirth: formData.dateOfBirth || personal.DOB || null,
+                    city: currentAddress.city || personal.city || null,
+                    pinCode: currentAddress.pincode || personal.pinCode || null,
+                    gender,
+                    ...resumeData,
+                    education: educationDetails || [],
+                    workExperience: experienceDetails || [],
+                    skills: skills.map(s => s.toJSON()),
+                    softwareTools: softwares.map(s => s.toJSON()),
+                    languages: languages.map(l => l.toJSON()),
+                    references: references.map(r => r.toJSON()),
+                    consent: true,
+                    status: "Active"
+                };
 
-                    const existingEmployee = await db.Employee.findOne({
-                        where: {
-                            [db.Sequelize.Op.or]: [
-                                { employeeCode },
-                                { email: employeePayload.email }
-                            ]
-                        },
-                        transaction
+                if (!existingEmployee) {
+                    existingEmployee = await db.Employee.findOne({
+                        where: { employeeCode },
+                        transaction,
+                        paranoid: false,
                     });
+                }
 
-                    if (existingEmployee) {
-                        await existingEmployee.update(employeePayload, { transaction });
-                    } else {
-                        await db.Employee.create(employeePayload, { transaction });
-                    }
+                if (existingEmployee) {
+                    await existingEmployee.update(employeePayload, { transaction });
+                } else {
+                    await db.Employee.create(employeePayload, { transaction });
                 }
             }
 
@@ -1263,17 +1348,14 @@ class OnboardingService extends BaseService {
     }
 
     async updateRecordByCifId(cifid, payload) {
-        const record = await db.OnboardingRecord.findOne({
-            where: { cifid: Number(cifid) },
-        });
-
-        if (!record) {
-            throw new Error("Onboarding record not found.");
+        const parsedCifId = Number(cifid);
+        if (!parsedCifId) {
+            throw new Error("Valid CIF ID is required for onboarding.");
         }
 
         return this.saveRecord({
             ...payload,
-            cifid: Number(cifid),
+            cifid: parsedCifId,
         });
     }
 

@@ -3,6 +3,8 @@ const controller = require("../controllers/cifSubmission.controller");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const authMiddleware = require("../middleware/auth.middleware");
+const { requireAnyRole } = require("../middleware/roleAccess.middleware");
 
 const router = express.Router();
 
@@ -44,7 +46,7 @@ const upload = multer({
 });
 
 // Routes
-router.post("/", (req, res, next) => {
+router.post("/", authMiddleware, requireAnyRole(["hr"]), (req, res, next) => {
   upload.single('resume')(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       // A Multer error occurred when uploading.
@@ -68,8 +70,8 @@ router.post("/", (req, res, next) => {
   });
 }, controller.create);
 
-router.get("/", controller.getAllSubmissions);
-router.get("/:cifid", controller.getSubmissionById);
-router.patch("/:cifid/status", controller.updateSubmissionStatus);
+router.get("/", authMiddleware, requireAnyRole(["hr"]), controller.getAllSubmissions);
+router.get("/:cifid", authMiddleware, requireAnyRole(["hr"]), controller.getSubmissionById);
+router.patch("/:cifid/status", authMiddleware, requireAnyRole(["hr"]), controller.updateSubmissionStatus);
 
 module.exports = router;

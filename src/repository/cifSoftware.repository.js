@@ -6,10 +6,14 @@ class CifSoftwareRepository extends BaseRepository {
         super(CifSoftware);
     }
 
-    async findByCifId(cifid) {
+    async findByCandidateId(candidateId) {
         return this.model.findAll({
-            where: { cifid },
+            where: { candidateId },
         });
+    }
+
+    async findByCifId(cifid) {
+        return this.findByCandidateId(cifid);
     }
 
     async update(id, data) {

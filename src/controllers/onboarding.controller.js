@@ -23,8 +23,13 @@ exports.saveRecord = asyncHandler(async (req, res) => {
 });
 
 exports.updateRecordByCifId = asyncHandler(async (req, res) => {
+    const cifid = Number(req.params.candidateId || req.params.cifid);
+    if (!Number.isInteger(cifid) || cifid <= 0) {
+        return ApiResponse.error(res, "A valid candidate ID is required.", null, 400);
+    }
+
     const record = await onboarding.updateRecordByCifId(
-        req.params.cifid,
+        cifid,
         req.body
     );
 
@@ -36,7 +41,12 @@ exports.updateRecordByCifId = asyncHandler(async (req, res) => {
 });
 
 exports.getRecordByCifId = asyncHandler(async (req, res) => {
-    const record = await onboarding.getRecordByCifId(req.params.cifid);
+    const cifid = Number(req.params.candidateId || req.params.cifid);
+    if (!Number.isInteger(cifid) || cifid <= 0) {
+        return ApiResponse.error(res, "A valid candidate ID is required.", null, 400);
+    }
+
+    const record = await onboarding.getRecordByCifId(cifid);
 
     return ApiResponse.success(
         res,
@@ -70,7 +80,7 @@ exports.uploadDocument = asyncHandler(async (req, res) => {
         throw new Error("Document file is required.");
     }
 
-    const cifid = Number(req.body?.cifid);
+    const cifid = Number(req.body?.candidateId || req.body?.cifid);
     const uploadData = cifid
         ? await onboarding.saveUploadedDocument(
               cifid,

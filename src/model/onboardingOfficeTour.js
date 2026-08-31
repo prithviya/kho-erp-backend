@@ -1,13 +1,12 @@
 module.exports = (sequelize, DataTypes) => {
-    const OfficeTour = sequelize.define(
-        "OfficeTour",
+    const OnboardingOffice = sequelize.define(
+        "OnboardingOffice",
         {
             otid: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-
             cifid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
@@ -16,7 +15,6 @@ module.exports = (sequelize, DataTypes) => {
                     key: "cifid",
                 },
             },
-
             onboardinginfoid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
@@ -25,31 +23,26 @@ module.exports = (sequelize, DataTypes) => {
                     key: "onboardinginfoid",
                 },
             },
-
             reception: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: false,
             },
-
             workstationSheet: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: false,
             },
-
             meetingRoom: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: false,
             },
-
             cafeteria: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: false,
             },
-
             hrCabin: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
@@ -63,5 +56,5 @@ module.exports = (sequelize, DataTypes) => {
         }
     );
 
-    return OfficeTour;
+    return OnboardingOffice;
 };

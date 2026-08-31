@@ -3,6 +3,7 @@ const router = require("express").Router();
 const authController = require("../controllers/auth.controller");
 const authenticate = require("../middleware/auth.middleware");
 const validate = require("../middleware/validate.middleware");
+const ApiResponse = require("../helpers/apiResponse");
 const {
     registerValidation,
     loginValidation,
@@ -12,7 +13,16 @@ const {
     changePasswordValidation,
     updateProfileValidation
 } = require("../validation/auth.validation");
-router.post("/register", registerValidation, validate, authController.register);
+
+const ensureRegistrationEnabled = (req, res, next) => {
+    if (String(process.env.ALLOW_PUBLIC_REGISTRATION || "false").toLowerCase() === "true") {
+        return next();
+    }
+
+    return ApiResponse.forbidden(res, "Public registration is disabled.");
+};
+
+router.post("/register", ensureRegistrationEnabled, registerValidation, validate, authController.register);
 router.post("/login", loginValidation, validate, authController.login);
 router.post("/refresh-token", refreshTokenValidation, validate, authController.refreshToken);
 router.post("/logout", authenticate, refreshTokenValidation, validate, authController.logout);

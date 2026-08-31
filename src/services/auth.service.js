@@ -58,7 +58,9 @@ class AuthService {
         const user = await authRepository.login(data.email);
         if (!user) {
             logger.warn(`Login failed for email: ${data.email}`);
-            throw new Error("Invalid email or password.");
+            const error = new Error("Invalid email or password.");
+            error.status = 401;
+            throw error;
         }
         const isPasswordMatched = await bcrypt.compare(
             data.password,
@@ -66,7 +68,9 @@ class AuthService {
         );
         if (!isPasswordMatched) {
             logger.warn(`Login failed for email: ${data.email}`);
-            throw new Error("Invalid email or password.");
+            const error = new Error("Invalid email or password.");
+            error.status = 401;
+            throw error;
         }
         logger.info(`Login successful for email: ${data.email}`);
         const tokens = await refreshTokenService.create(user, sessionInfo);

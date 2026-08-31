@@ -11,6 +11,13 @@ class OnboardingRepository extends BaseRepository {
             where: { cifid },
         });
     }
+
+    async findSelectedCandidates() {
+        return await this.model.findAll({
+            where: { status: "Selected" },
+            raw: true,
+        });
+    }
 }
 
 module.exports = new OnboardingRepository();

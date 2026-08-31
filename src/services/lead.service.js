@@ -4,9 +4,22 @@ class LeadService {
     async getAll(filters = {}) {
         return await leadRepository.getAll(filters);
     }
-    async getById(id) {
+    assertLeadOwnership(lead, userId) {
+        if (!lead || Number(lead.assignedTo) !== Number(userId)) {
+            const error = new Error("You can only access leads assigned to you.");
+            error.status = 403;
+            throw error;
+        }
+    }
+
+    async getById(id, access = {}) {
         const lead = await leadRepository.getById(id);
         if (!lead) throw new Error("Lead not found.");
+
+        if (access.requireAssignedUser) {
+            this.assertLeadOwnership(lead, access.userId);
+        }
+
         return lead;
     }
     async createLead(data, userId) {
@@ -49,11 +62,16 @@ class LeadService {
         }
     }
 
-    async updateLead(id, data, userId) {
+    async updateLead(id, data, userId, access = {}) {
         const transaction = await sequelize.transaction();
         try {
             const lead = await Lead.findByPk(id, { transaction });
             if (!lead) throw new Error("Lead not found.");
+
+            if (access.requireAssignedUser) {
+                this.assertLeadOwnership(lead, access.userId);
+            }
+
             // Update Lead
             await lead.update({
                 companyName: data.companyName,

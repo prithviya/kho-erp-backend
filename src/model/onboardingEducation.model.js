@@ -10,10 +10,6 @@ module.exports = (sequelize, DataTypes) => {
             cifid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
-                references: {
-                    model: "onboarding_records",
-                    key: "cifid",
-                },
             },
             qualification: {
                 type: DataTypes.STRING(150),

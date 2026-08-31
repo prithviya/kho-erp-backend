@@ -317,66 +317,27 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
   const { cifid } = req.params;
   const { status } = req.body;
 
-  // Validate frontend status
-  const validStatuses = [
-    "Pending",
-    "Shortlisted",
-    "Rejected"
-  ];
+  try {
+    const submission = await cifSubmissionService.updateStatus(cifid, status);
 
-  if (!status || !validStatuses.includes(status)) {
+    return ApiResponse.success(
+      res,
+      `Application ${submission.appliedStatus.toLowerCase()} successfully.`,
+      {
+        cifid,
+        status: submission.appliedStatus,
+      }
+    );
+  } catch (error) {
+    const message = error?.message || "Failed to update submission status.";
+    const statusCode = error?.message?.includes("cannot") || error?.message?.includes("must be one of") ? 400 : 409;
+
     return ApiResponse.error(
       res,
-      `Status must be one of: ${validStatuses.join(", ")}`,
-      400
+      message,
+      statusCode
     );
   }
-
-  // Find submission from cif_submissions table
-  let submission = await cifSubmission.findOne({
-    where: {
-      cifid: cifid
-    }
-  });
-  
-  if (!submission) {
-    submission = await cifSubmission.create({
-      cifid: cifid,
-      appliedStatus: "Pending"
-    });
-  }
-
-  const currentStatus = String(submission.appliedStatus || "").trim().toLowerCase();
-  if (status === "Shortlisted" && ["reject", "rejected", "selected"].includes(currentStatus)) {
-    return ApiResponse.error(
-      res,
-      "Rejected or selected applications cannot be shortlisted.",
-      409
-    );
-  }
-
-  // Convert frontend status to database status
-  const dbStatusMap = {
-    Pending: "Pending",
-    Shortlisted: "Shortlist",
-    Rejected: "Reject"
-  };
-
-  const dbStatus = dbStatusMap[status];
-
-  // Update status
-  submission.appliedStatus = dbStatus;
-
-  await submission.save();
-
-  return ApiResponse.success(
-    res,
-    `Application ${status.toLowerCase()} successfully.`,
-    {
-      cifid,
-      status
-    }
-  );
 });
 
 // Helper function to get complete submission

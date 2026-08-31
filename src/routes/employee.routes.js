@@ -4,6 +4,7 @@ const multer = require("multer");
 const router = require("express").Router();
 const controller = require("../controllers/employee.controller");
 const authMiddleware = require("../middleware/auth.middleware");
+const { requireAnyRole } = require("../middleware/roleAccess.middleware");
 
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
 if (!fs.existsSync(uploadDir)) {
@@ -28,9 +29,9 @@ const upload = multer({
     }
 });
 
-router.get("/", authMiddleware, controller.getEmployees);
-router.get("/:id", authMiddleware, controller.getEmployeeById);
-router.post("/", authMiddleware, upload.single("resume"), controller.createEmployee);
-router.put("/:id", authMiddleware, upload.single("resume"), controller.updateEmployee);
+router.get("/", authMiddleware, requireAnyRole(["hr"]), controller.getEmployees);
+router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getEmployeeById);
+router.post("/", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.createEmployee);
+router.put("/:id", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.updateEmployee);
 
 module.exports = router;

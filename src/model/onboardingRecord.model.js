@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
     const OnboardingRecord = sequelize.define(
-        "onboardingRecord",
+        "OnboardingRecord",
         {
             id: {
                 type: DataTypes.INTEGER,
@@ -11,20 +11,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 unique: true,
-                references: {
-                    model: "cif_personals",
-                    key: "cifid",
-                },
             },
             status: {
                 type: DataTypes.ENUM("DRAFT", "FINAL"),
                 allowNull: false,
                 defaultValue: "DRAFT",
-            },
-            formData: {
-                type: DataTypes.JSON,
-                allowNull: false,
-                defaultValue: {},
             },
             experienceDetails: {
                 type: DataTypes.JSON,
@@ -35,7 +26,12 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.JSON,
                 allowNull: false,
                 defaultValue: [],
-            }
+            },
+            formData: {
+                type: DataTypes.JSON,
+                allowNull: false,
+                defaultValue: {},
+            },
         },
         {
             tableName: "onboarding_records",

@@ -6,10 +6,14 @@ class CifExperienceRepository extends BaseRepository {
         super(CifExperience);
     }
 
-    async findByCifId(cifid) {
+    async findByCandidateId(candidateId) {
         return await this.model.findAll({
-            where: { cifid },
+            where: { candidateId },
         });
+    }
+
+    async findByCifId(cifid) {
+        return this.findByCandidateId(cifid);
     }
     
 }

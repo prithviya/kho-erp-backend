@@ -1,29 +1,40 @@
 const BaseService = require("./base.service");
 const repository = require("../repository/cifReference.repository");
 
+function normalizeCandidateId(data = {}) {
+    const candidateId = Number(data.candidateId || data.cifid || 0);
+    if (!candidateId) {
+        throw new Error("candidateId is required.");
+    }
+
+    return {
+        ...data,
+        candidateId,
+        cifid: candidateId,
+    };
+}
+
 class CifReferenceService extends BaseService {
     constructor() {
         super(repository);
     }
 
     async create(data) {
-        if (!data.cifid) {
-            throw new Error("CIF ID is required.");
-        }
+        const payload = normalizeCandidateId(data);
 
-        if (!data.referenceName) {
+        if (!payload.referenceName) {
             throw new Error("Reference name is required.");
         }
 
-        if (!data.referenceEmail) {
+        if (!payload.referenceEmail) {
             throw new Error("Reference email is required.");
         }
 
-        if (!data.referencePhone) {
+        if (!payload.referencePhone) {
             throw new Error("Reference phone is required.");
         }
 
-        return await super.create(data);
+        return await super.create(payload);
     }
 
     async getAll() {
@@ -40,8 +51,12 @@ class CifReferenceService extends BaseService {
         return reference;
     }
 
+    async getByCandidateId(candidateId) {
+        return await repository.findByCandidateId(candidateId);
+    }
+
     async getByCifId(cifid) {
-        return await repository.findByCifId(cifid);
+        return this.getByCandidateId(cifid);
     }
 
     async update(id, data) {

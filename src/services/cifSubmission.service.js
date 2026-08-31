@@ -22,6 +22,89 @@ const list = (value, fieldName) => {
 };
 
 class CifSubmissionService {
+    normalizeStatus(status) {
+        if (!status) return "Pending";
+
+        const normalized = String(status).trim();
+        const direct = {
+            Pending: "Pending",
+            Shortlisted: "Shortlisted",
+            Selected: "Selected",
+            Rejected: "Rejected",
+            shortlist: "Shortlisted",
+            shortlisted: "Shortlisted",
+            selected: "Selected",
+            reject: "Rejected",
+            rejected: "Rejected",
+            pending: "Pending",
+        };
+
+        return direct[normalized] || direct[normalized.toLowerCase()] || "Pending";
+    }
+
+    async ensureSubmission(cifid, transaction) {
+        const parsedCifId = Number(cifid);
+        if (!parsedCifId) {
+            throw new Error("Valid CIF ID is required.");
+        }
+
+        let submission = await sequelize.models.cifSubmission.findOne({
+            where: { cifid: parsedCifId },
+            transaction,
+        });
+
+        if (!submission) {
+            submission = await sequelize.models.cifSubmission.create(
+                {
+                    cifid: parsedCifId,
+                    appliedStatus: "Pending",
+                },
+                { transaction }
+            );
+        }
+
+        return submission;
+    }
+
+    async updateStatus(cifid, incomingStatus) {
+        const status = this.normalizeStatus(incomingStatus);
+        const validStatuses = ["Pending", "Shortlisted", "Selected", "Rejected"];
+
+        if (!validStatuses.includes(status)) {
+            throw new Error(`Status must be one of: ${validStatuses.join(", ")}`);
+        }
+
+        return sequelize.transaction(async (transaction) => {
+            const submission = await this.ensureSubmission(cifid, transaction);
+            const currentStatus = this.normalizeStatus(submission.appliedStatus);
+
+            if (status === "Selected" && ["Rejected"].includes(currentStatus)) {
+                throw new Error("Rejected applications cannot be moved to selected.");
+            }
+
+            if (status === "Shortlisted" && ["Rejected", "Selected"].includes(currentStatus)) {
+                throw new Error("Rejected or selected applications cannot be shortlisted again.");
+            }
+
+            if (status === "Rejected" && currentStatus === "Selected") {
+                throw new Error("Selected applications cannot be rejected.");
+            }
+
+            submission.appliedStatus = status;
+            await submission.save({ transaction });
+            return submission;
+        });
+    }
+
+    async canProceedToOnboarding(cifid, transaction) {
+        const submission = await sequelize.models.cifSubmission.findOne({
+            where: { cifid: Number(cifid) },
+            transaction,
+        });
+
+        return this.normalizeStatus(submission?.appliedStatus) === "Selected";
+    }
+
     async create(payload) {
         const personal = payload.personal || {};
         const academics = list(payload.academics, "Academics");
@@ -91,6 +174,8 @@ class CifSubmissionService {
             await createAll(CifSoftware, softwares);
             await createAll(CifLanguage, languages);
             await createAll(CifReference, references);
+
+            await this.ensureSubmission(cifid, transaction);
 
             return cifPersonal;
         });

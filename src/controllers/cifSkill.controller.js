@@ -33,7 +33,8 @@ exports.getById = asyncHandler(async (req, res) => {
 });
 
 exports.getByCifId = asyncHandler(async (req, res) => {
-    const skills = await cifSkill.getByCifId(req.params.cifid);
+    const candidateId = req.params.candidateId || req.params.cifid;
+    const skills = await cifSkill.getByCifId(candidateId);
 
     return ApiResponse.success(
         res,

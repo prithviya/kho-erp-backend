@@ -5,6 +5,8 @@ const multer = require("multer");
 const router = express.Router();
 
 const controller = require("../controllers/onboarding.controller");
+const authMiddleware = require("../middleware/auth.middleware");
+const { requireAnyRole } = require("../middleware/roleAccess.middleware");
 
 const uploadDir = path.resolve(
 	process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"),
@@ -33,17 +35,19 @@ const upload = multer({
 	},
 });
 
-router.post("/record", controller.saveRecord);
-router.put("/record/:cifid", controller.updateRecordByCifId);
-router.get("/record", controller.getAllRecords);
-router.get("/record/:cifid", controller.getRecordByCifId);
-router.get("/next-employee-id", controller.getNextEmployeeId);
-router.post("/upload-document", upload.single("document"), controller.uploadDocument);
+router.post("/record", authMiddleware, requireAnyRole(["hr"]), controller.saveRecord);
+router.put("/record/:cifid", authMiddleware, requireAnyRole(["hr"]), controller.updateRecordByCifId);
+router.put("/record/candidate/:candidateId", authMiddleware, requireAnyRole(["hr"]), controller.updateRecordByCifId);
+router.get("/record", authMiddleware, requireAnyRole(["hr"]), controller.getAllRecords);
+router.get("/record/:cifid", authMiddleware, requireAnyRole(["hr"]), controller.getRecordByCifId);
+router.get("/record/candidate/:candidateId", authMiddleware, requireAnyRole(["hr"]), controller.getRecordByCifId);
+router.get("/next-employee-id", authMiddleware, requireAnyRole(["hr"]), controller.getNextEmployeeId);
+router.post("/upload-document", authMiddleware, requireAnyRole(["hr"]), upload.single("document"), controller.uploadDocument);
 
-router.post("/", controller.create);
-router.get("/", controller.getAll);
-router.get("/:id", controller.getById);
-router.put("/:id", controller.update);
-router.delete("/:id", controller.delete);
+router.post("/", authMiddleware, requireAnyRole(["hr"]), controller.create);
+router.get("/", authMiddleware, requireAnyRole(["hr"]), controller.getAll);
+router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getById);
+router.put("/:id", authMiddleware, requireAnyRole(["hr"]), controller.update);
+router.delete("/:id", authMiddleware, requireAnyRole(["hr"]), controller.delete);
 
 module.exports = router;

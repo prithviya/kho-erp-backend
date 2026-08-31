@@ -1,25 +1,36 @@
 const BaseService = require("./base.service");
 const repository = require("../repository/cifAcademic.repository");
 
+function normalizeCandidateId(data = {}) {
+    const candidateId = Number(data.candidateId || data.cifid || 0);
+    if (!candidateId) {
+        throw new Error("candidateId is required.");
+    }
+
+    return {
+        ...data,
+        candidateId,
+        cifid: candidateId,
+    };
+}
+
 class CifAcademicService extends BaseService {
     constructor() {
         super(repository);
     }
 
     async create(data) {
-        if (!data.cifid) {
-            throw new Error("CIF ID is required.");
-        }
+        const payload = normalizeCandidateId(data);
 
-        if (!data.degree) {
+        if (!payload.degree) {
             throw new Error("Degree is required.");
         }
 
-        if (!data.university) {
+        if (!payload.university) {
             throw new Error("University is required.");
         }
 
-        return await super.create(data);
+        return await super.create(payload);
     }
 
     async getAll() {
@@ -36,8 +47,12 @@ class CifAcademicService extends BaseService {
         return academic;
     }
 
+    async getByCandidateId(candidateId) {
+        return await repository.findByCandidateId(candidateId);
+    }
+
     async getByCifId(cifid) {
-        return await repository.findByCifId(cifid);
+        return this.getByCandidateId(cifid);
     }
 
     async update(id, data) {
