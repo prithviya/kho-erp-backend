@@ -13,6 +13,22 @@ const {
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
 
+const useLatestRecruitment = (submission) => {
+  const history = Array.isArray(submission.recruitmentHistory)
+    ? submission.recruitmentHistory
+    : [];
+  const latest = history.reduce((current, item) => (
+    !current || item.rid > current.rid ? item : current
+  ), submission.recruitment || null);
+
+  if (latest) submission.recruitment = latest;
+};
+
+const normalizeLanguageLevel = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : normalized;
+};
+
 // Create full submission
 exports.create = asyncHandler(async (req, res) => {
   let { 
@@ -34,7 +50,7 @@ exports.create = asyncHandler(async (req, res) => {
     if (typeof languages === 'string') languages = JSON.parse(languages);
     if (typeof references === 'string') references = JSON.parse(references);
   } catch (err) {
-    return ApiResponse.error(res, "Invalid JSON data in form fields", 400);
+    return ApiResponse.error(res, "Invalid JSON data in form fields", null, 400);
   }
 
   // Start transaction
@@ -45,13 +61,13 @@ exports.create = asyncHandler(async (req, res) => {
     // 1. Create Personal
     const personalData = await cifPersonal.create(personal, { transaction });
 
-    const cifid = personalData.cifid;
+    const cifid = personalData.id;
 
     // 2. Create Academics
     if (academics && academics.length > 0) {
       const academicData = academics.map(edu => ({
         ...edu,
-        cifid: cifid
+        candidateId: cifid
       }));
       await cifAcademic.bulkCreate(academicData, { transaction });
     }
@@ -60,7 +76,7 @@ exports.create = asyncHandler(async (req, res) => {
     if (experiences && experiences.length > 0) {
       const experienceData = experiences.map(exp => ({
         ...exp,
-        cifid: cifid
+        candidateId: cifid
       }));
       await cifExperience.bulkCreate(experienceData, { transaction });
     }
@@ -69,7 +85,7 @@ exports.create = asyncHandler(async (req, res) => {
     if (skills && skills.length > 0) {
       const skillData = skills.map(skill => ({
         ...skill,
-        cifid: cifid
+        candidateId: cifid
       }));
       await cifSkill.bulkCreate(skillData, { transaction });
     }
@@ -78,7 +94,9 @@ exports.create = asyncHandler(async (req, res) => {
     if (softwares && softwares.length > 0) {
       const softwareData = softwares.map(sw => ({
         ...sw,
-        cifid: cifid
+        candidateId: cifid,
+        toolName: sw.toolName || sw.tools,
+        proficiencyLevel: sw.proficiencyLevel || sw.levels
       }));
       await cifSoftware.bulkCreate(softwareData, { transaction });
     }
@@ -87,7 +105,11 @@ exports.create = asyncHandler(async (req, res) => {
     if (languages && languages.length > 0) {
       const languageData = languages.map(lang => ({
         ...lang,
-        cifid: cifid
+        candidateId: cifid,
+        languageName: lang.languageName || lang.language,
+        speakLevel: normalizeLanguageLevel(lang.speakLevel || lang.Speak),
+        readLevel: normalizeLanguageLevel(lang.readLevel || lang.Read),
+        writeLevel: normalizeLanguageLevel(lang.writeLevel || lang.Write)
       }));
       await cifLanguage.bulkCreate(languageData, { transaction });
     }
@@ -96,13 +118,14 @@ exports.create = asyncHandler(async (req, res) => {
     if (references && references.length > 0) {
       const referenceData = references.map(ref => ({
         ...ref,
-        cifid: cifid
+        candidateId: cifid
       }));
       await cifReference.bulkCreate(referenceData, { transaction });
     }
 
     // 8. Create Submission record
     await cifSubmission.create({
+      candidateId: cifid,
       cifid: cifid,
       appliedStatus: "Pending"
     }, { transaction });
@@ -191,6 +214,7 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
   
   const formattedSubmissions = submissions.map(sub => {
     const plainSub = sub.toJSON();
+    useLatestRecruitment(plainSub);
     plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
     
     if (plainSub.recruitment) {
@@ -258,6 +282,7 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
   }
 
   const plainSub = submission.toJSON();
+  useLatestRecruitment(plainSub);
   plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
   
   if (plainSub.recruitment) {

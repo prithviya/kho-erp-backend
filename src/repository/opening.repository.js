@@ -35,9 +35,10 @@ class OpeningRepository extends BaseRepository {
         });
     }
 
-    async findByDepartmentId(departmentId) {
+    async findByDepartmentId(departmentId, options = {}) {
         return await this.model.findAll({
             where: { departmentId },
+            ...options,
             include: [
                 {
                     model: Department,

@@ -21,6 +21,11 @@ const list = (value, fieldName) => {
     return value;
 };
 
+const normalizeLanguageLevel = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : normalized;
+};
+
 class CifSubmissionService {
     normalizeStatus(status) {
         if (!status) return "Pending";
@@ -49,13 +54,14 @@ class CifSubmissionService {
         }
 
         let submission = await sequelize.models.cifSubmission.findOne({
-            where: { cifid: parsedCifId },
+            where: { candidateId: parsedCifId },
             transaction,
         });
 
         if (!submission) {
             submission = await sequelize.models.cifSubmission.create(
                 {
+                    candidateId: parsedCifId,
                     cifid: parsedCifId,
                     appliedStatus: "Pending",
                 },
@@ -138,14 +144,14 @@ class CifSubmissionService {
             required(item.provider, "Skill provider is required.");
         });
         softwares.forEach((item) => {
-            required(item.tools, "Software tool is required.");
-            required(item.levels, "Software level is required.");
+            required(item.toolName || item.tools, "Software tool is required.");
+            required(item.proficiencyLevel || item.levels, "Software level is required.");
         });
         languages.forEach((item) => {
-            required(item.language, "Language is required.");
-            required(item.Speak, "Speak proficiency is required.");
-            required(item.Read, "Read proficiency is required.");
-            required(item.Write, "Write proficiency is required.");
+            required(item.languageName || item.language, "Language is required.");
+            required(item.speakLevel || item.Speak, "Speak proficiency is required.");
+            required(item.readLevel || item.Read, "Read proficiency is required.");
+            required(item.writeLevel || item.Write, "Write proficiency is required.");
         });
         references.forEach((item) => {
             required(item.referenceName, "Reference name is required.");
@@ -163,16 +169,32 @@ class CifSubmissionService {
             if (existingPhone) throw new Error("Phone number already exists.");
 
             const cifPersonal = await CifPersonal.create(personal, { transaction });
-            const cifid = cifPersonal.cifid;
+            const cifid = cifPersonal.id;
             const createAll = (Model, entries) => Promise.all(
-                entries.map((entry) => Model.create({ ...entry, cifid }, { transaction }))
+                entries.map((entry) => Model.create({ ...entry, candidateId: cifid }, { transaction }))
             );
 
             await createAll(CifAcademic, academics);
             await createAll(CifExperience, experiences);
             await createAll(CifSkill, skills);
-            await createAll(CifSoftware, softwares);
-            await createAll(CifLanguage, languages);
+            await createAll(
+                CifSoftware,
+                softwares.map((item) => ({
+                    ...item,
+                    toolName: item.toolName || item.tools,
+                    proficiencyLevel: item.proficiencyLevel || item.levels,
+                }))
+            );
+            await createAll(
+                CifLanguage,
+                languages.map((item) => ({
+                    ...item,
+                    languageName: item.languageName || item.language,
+                    speakLevel: normalizeLanguageLevel(item.speakLevel || item.Speak),
+                    readLevel: normalizeLanguageLevel(item.readLevel || item.Read),
+                    writeLevel: normalizeLanguageLevel(item.writeLevel || item.Write),
+                }))
+            );
             await createAll(CifReference, references);
 
             await this.ensureSubmission(cifid, transaction);

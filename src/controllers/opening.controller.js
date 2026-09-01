@@ -67,3 +67,23 @@ exports.delete = asyncHandler(async (req, res) => {
         "Opening deleted successfully."
     );
 });
+
+exports.getPublicAll = asyncHandler(async (req, res) => {
+    const openings = await openingService.getPublicAll();
+
+    return ApiResponse.success(
+        res,
+        "Openings fetched successfully.",
+        openings
+    );
+});
+
+exports.getPublicById = asyncHandler(async (req, res) => {
+    const openingData = await openingService.getPublicById(req.params.id);
+
+    return ApiResponse.success(
+        res,
+        "Opening fetched successfully.",
+        openingData
+    );
+});

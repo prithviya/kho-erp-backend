@@ -31,20 +31,36 @@ class OpeningService extends BaseService {
             prefix = words[0].substring(0, 2).toUpperCase();
         }
 
-        // Get count to generate sequence
-        const existingOpenings = await repository.findByDepartmentId(data.departmentId);
-        const sequence = existingOpenings.length + 1;
-        const formattedSequence = String(sequence).padStart(3, "0");
-        
-        data.code = `${prefix}-${formattedSequence}`;
+        // Include soft-deleted openings so a unique code is never reused.
+        const existingOpenings = await repository.findByDepartmentId(
+            data.departmentId,
+            { paranoid: false }
+        );
+        const highestSequence = existingOpenings.reduce((highest, opening) => {
+            const match = opening.code && opening.code.match(/^.+-(\d+)$/);
+            return match ? Math.max(highest, Number(match[1])) : highest;
+        }, 0);
 
-        const existingOpening = await repository.findByCode(data.code);
+        let opening;
+        for (let sequence = highestSequence + 1; sequence < highestSequence + 1000; sequence += 1) {
+            data.code = `${prefix}-${String(sequence).padStart(3, "0")}`;
 
-        if (existingOpening) {
-            throw new Error("Opening code already exists.");
+            try {
+                opening = await super.create(data);
+                break;
+            } catch (error) {
+                if (error.name !== "SequelizeUniqueConstraintError" || error.fields?.code === undefined) {
+                    throw error;
+                }
+            }
         }
 
-        const opening = await super.create(data);
+        if (!opening) {
+            const error = new Error("Unable to generate a unique opening code.");
+            error.status = 409;
+            throw error;
+        }
+
         const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
 
         opening.jobOpeningUrl = `${frontendUrl}/cif-form?jobid=${opening.jobid}`;
@@ -57,10 +73,24 @@ class OpeningService extends BaseService {
         return await repository.findAll();
     }
 
+    async getPublicAll() {
+        return await repository.findActive();
+    }
+
     async getById(id) {
         const opening = await repository.findById(id);
 
         if (!opening) {
+            throw new Error("Opening not found.");
+        }
+
+        return opening;
+    }
+
+    async getPublicById(id) {
+        const opening = await repository.findById(id);
+
+        if (!opening || !opening.isActive) {
             throw new Error("Opening not found.");
         }
 

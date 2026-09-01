@@ -5,6 +5,8 @@ const authMiddleware = require("../middleware/auth.middleware");
 const { requireAnyRole } = require("../middleware/roleAccess.middleware");
 
 router.post("/", authMiddleware, requireAnyRole(["hr"]), openingController.create);
+router.get("/public", openingController.getPublicAll);
+router.get("/public/:id", openingController.getPublicById);
 router.get("/", authMiddleware, requireAnyRole(["hr"]), openingController.getAll);
 router.get("/:id", authMiddleware, requireAnyRole(["hr"]), openingController.getById);
 router.put("/:id", authMiddleware, requireAnyRole(["hr"]), openingController.update);

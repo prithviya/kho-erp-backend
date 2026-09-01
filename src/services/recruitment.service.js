@@ -7,17 +7,20 @@ class RecruitmentService extends BaseService {
     }
 
     async create(data) {
-        if (!data.cifid) {
+        const cifid = Number(data.cifid ?? data.candidateId);
+        if (!cifid) {
             throw new Error("CIF ID is required.");
         }
 
-        const existingRecruitment = await repository.findByCifId(data.cifid);
+        const payload = { ...data, cifid };
+
+        const existingRecruitment = await repository.findByCifId(cifid);
 
         if (existingRecruitment) {
-            return await this.update(existingRecruitment.rid, data);
+            return await super.create(payload);
         }
 
-        return await super.create(data);
+        return await super.create(payload);
     }
 
     async getAll() {

@@ -46,7 +46,7 @@ const upload = multer({
 });
 
 // Routes
-router.post("/", authMiddleware, requireAnyRole(["hr"]), (req, res, next) => {
+router.post("/", (req, res, next) => {
   upload.single('resume')(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       // A Multer error occurred when uploading.
