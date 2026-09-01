@@ -124,59 +124,80 @@ class CifSubmissionService {
 
     async create(payload) {
         const personal = payload.personal || {};
-        const academics = list(payload.academics, "Academics");
-        const experiences = list(payload.experiences, "Experiences");
-        const skills = list(payload.skills, "Skills");
-        const softwares = list(payload.softwares, "Software tools");
-        const languages = list(payload.languages, "Languages");
-        const references = list(payload.references, "References");
+        let academics = list(payload.academics, "Academics");
+        let experiences = list(payload.experiences, "Experiences");
+        let skills = list(payload.skills, "Skills");
+        let softwares = list(payload.softwares, "Software tools");
+        let languages = list(payload.languages, "Languages");
+        let references = list(payload.references, "References");
 
         required(personal.fullName, "Full name is required.");
         required(personal.email, "Email is required.");
         required(personal.phoneNumber, "Phone number is required.");
+        if (!/^\d{10}$/.test(String(personal.phoneNumber).trim())) {
+            const error = new Error("Phone number must contain exactly 10 digits.");
+            error.status = 400;
+            throw error;
+        }
+        if (personal.pinCode && !/^\d{6}$/.test(String(personal.pinCode).trim())) {
+            const error = new Error("PIN code must contain exactly 6 digits.");
+            error.status = 400;
+            throw error;
+        }
+        if (personal.DOB) {
+            const dateOfBirth = new Date(personal.DOB);
+            const minimumBirthDate = new Date();
+            minimumBirthDate.setFullYear(minimumBirthDate.getFullYear() - 18);
+            if (Number.isNaN(dateOfBirth.getTime()) || dateOfBirth > minimumBirthDate) {
+                const error = new Error("Applicant must be at least 18 years old.");
+                error.status = 400;
+                throw error;
+            }
+        }
+
+        academics = academics.filter((item) => item.degree && item.university && item.graduationYear);
+        const invalidExperience = experiences.find((item) => {
+            const started = [item.companyName, item.location, item.role, item.startDate, item.endDate]
+                .some((value) => String(value || "").trim());
+            return started && (!item.companyName || !item.location || !item.role || !item.startDate);
+        });
+        if (invalidExperience) {
+            const error = new Error("Employer, location, job title, and start date are required for each experience entry.");
+            error.status = 400;
+            throw error;
+        }
+        experiences = experiences.filter((item) => item.companyName && item.location && item.role && item.startDate);
+        skills = skills.filter((item) => item.skillName && item.skillLevel);
+        softwares = softwares.filter((item) => (item.toolName || item.tools) && (item.proficiencyLevel || item.levels));
+        languages = languages.filter((item) => (
+            (item.languageName || item.language)
+            && (item.speakLevel || item.Speak)
+            && (item.readLevel || item.Read)
+            && (item.writeLevel || item.Write)
+        ));
+        references = references.filter((item) => item.referenceName && item.referenceEmail && item.referencePhone);
 
         academics.forEach((item) => {
             required(item.degree, "Degree is required.");
             required(item.university, "University is required.");
-            required(item.graduationYear, "Graduation year is required.");
-            required(item.grade, "Academic grade is required.");
-            required(item.city, "Academic city is required.");
-        });
-        experiences.forEach((item) => {
-            required(item.companyName, "Company name is required.");
-            required(item.location, "Experience location is required.");
-            required(item.role, "Role is required.");
-            required(item.startDate, "Start date is required.");
-        });
-        skills.forEach((item) => {
-            required(item.skillName, "Skill name is required.");
-            required(item.skillLevel, "Skill level is required.");
-            required(item.year, "Skill year is required.");
-            required(item.provider, "Skill provider is required.");
-        });
-        softwares.forEach((item) => {
-            required(item.toolName || item.tools, "Software tool is required.");
-            required(item.proficiencyLevel || item.levels, "Software level is required.");
-        });
-        languages.forEach((item) => {
-            required(item.languageName || item.language, "Language is required.");
-            required(item.speakLevel || item.Speak, "Speak proficiency is required.");
-            required(item.readLevel || item.Read, "Read proficiency is required.");
-            required(item.writeLevel || item.Write, "Write proficiency is required.");
-        });
-        references.forEach((item) => {
-            required(item.referenceName, "Reference name is required.");
-            required(item.referenceEmail, "Reference email is required.");
-            required(item.referencePhone, "Reference phone is required.");
+            if (!/^\d{4}$/.test(String(item.graduationYear).trim())) {
+                throw new Error("Graduation year must contain four digits.");
+            }
         });
 
         return sequelize.transaction(async (transaction) => {
             const [existingEmail, existingPhone] = await Promise.all([
-                CifPersonal.findOne({ where: { email: personal.email }, transaction }),
+                CifPersonal.findOne({
+                    where: {
+                        email: personal.email,
+                        appliedPosition: personal.appliedPosition || null,
+                    },
+                    transaction,
+                }),
                 CifPersonal.findOne({ where: { phoneNumber: personal.phoneNumber }, transaction }),
             ]);
 
-            if (existingEmail) throw new Error("Email already exists.");
+            if (existingEmail) throw new Error("Email already exists for this role.");
             if (existingPhone) throw new Error("Phone number already exists.");
 
             const cifPersonal = await CifPersonal.create(personal, { transaction });

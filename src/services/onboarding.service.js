@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 const BaseService = require("./base.service");
 const repository = require("../repository/onboarding.repository");
 const db = require("../model");
@@ -67,6 +69,18 @@ class OnboardingService extends BaseService {
         }
 
         return newValue;
+    }
+
+    normalizeFullName(formData, fallbackName = "") {
+        const directFullName = String(formData?.fullName || "").trim();
+        if (directFullName) {
+            return directFullName;
+        }
+
+        const firstName = String(formData?.firstName || "").trim();
+        const lastName = String(formData?.lastName || "").trim();
+        const combinedName = [firstName, lastName].filter(Boolean).join(" ");
+        return combinedName || String(fallbackName || "").trim();
     }
 
     parseExperienceTotal(value) {
@@ -374,20 +388,23 @@ class OnboardingService extends BaseService {
         const icebreaker = formData.icebreaker || {};
         const education = Array.isArray(formData.education) ? formData.education : [];
         const experience = Array.isArray(formData.experience) ? formData.experience : [];
+        const fullName = this.normalizeFullName(formData);
 
         const requiredBasicFields = [
-            ["firstName", "Basic Details: firstName"],
-            ["lastName", "Basic Details: lastName"],
+            ["fullName", "Basic Details: fullName"],
             ["employeeId", "Basic Details: employeeId"],
             ["personalEmail", "Basic Details: personalEmail"],
             ["personalPhone", "Basic Details: personalPhone"],
             ["officialEmail", "Basic Details: officialEmail"],
-            ["officePhone", "Basic Details: officePhone"],
             ["gender", "Basic Details: gender"],
             ["maritalStatus", "Basic Details: maritalStatus"],
             ["dateOfBirth", "Basic Details: dateOfBirth"],
             ["dateOfJoining", "Basic Details: dateOfJoining"],
         ];
+
+        if (!this.hasText(fullName)) {
+            errors.push("Basic Details: fullName");
+        }
 
         requiredBasicFields.forEach(([key, label]) => {
             if (!this.hasText(formData[key])) {
@@ -402,7 +419,6 @@ class OnboardingService extends BaseService {
             ["department", "Employment Information: department"],
             ["designation", "Employment Information: designation"],
             ["reportingHead", "Employment Information: reportingHead"],
-            ["uanNumber", "Employment Information: uanNumber"],
             ["panNumber", "Employment Information: panNumber"],
             ["currentSalary", "Employment Information: currentSalary"],
         ];
@@ -464,25 +480,6 @@ class OnboardingService extends BaseService {
             }
         }
 
-        const icebreakerChecks = [
-            [icebreaker.favoriteCake, "Icebreaker: favoriteCake"],
-            [icebreaker.favoriteColor, "Icebreaker: favoriteColor"],
-            [icebreaker.favoriteSong, "Icebreaker: favoriteSong"],
-            [icebreaker.favoriteMovie, "Icebreaker: favoriteMovie"],
-            [icebreaker.favoriteFood, "Icebreaker: favoriteFood"],
-            [icebreaker.favoriteActor, "Icebreaker: favoriteActor"],
-            [icebreaker.dreamVacation, "Icebreaker: dreamVacation"],
-            [icebreaker.weekendActivity, "Icebreaker: weekendActivity"],
-            [icebreaker.coffeeOrTea, "Icebreaker: coffeeOrTea"],
-            [icebreaker.favoriteSports, "Icebreaker: favoriteSports"],
-        ];
-
-        icebreakerChecks.forEach(([value, label]) => {
-            if (!this.hasText(value)) {
-                errors.push(label);
-            }
-        });
-
         if (errors.length > 0) {
             const summary = this.formatValidationSummary(errors);
             const error = new Error(
@@ -493,6 +490,145 @@ class OnboardingService extends BaseService {
             error.errors = errors.map((field) => ({ field, message: "Required" }));
             throw error;
         }
+    }
+
+    normalizeUserRoleCode(roleValue) {
+        const rawRole = String(roleValue || "").trim();
+        if (!rawRole) {
+            return "TEAM_MEMBER";
+        }
+
+        const normalized = rawRole.replace(/[\s_-]+/g, "").toUpperCase();
+
+        if (["CRM", "CRMEXECUTIVE", "CRM_EXECUTIVE"].includes(normalized)) {
+            return "CRM_EXECUTIVE";
+        }
+
+        if (["MANAGER"].includes(normalized)) {
+            return "MANAGER";
+        }
+
+        if (["SUPERADMIN", "SUPER_ADMIN", "SUPERADMINISTRATOR"].includes(normalized)) {
+            return "SUPER_ADMIN";
+        }
+
+        if (["HR"].includes(normalized)) {
+            return "HR";
+        }
+
+        if (["TEAMMEMBER", "TEAM_MEMBER"].includes(normalized)) {
+            return "TEAM_MEMBER";
+        }
+
+        return "TEAM_MEMBER";
+    }
+
+    generateRandomPassword(length = 12) {
+        const randomBytes = crypto.randomBytes(length);
+        return randomBytes
+            .toString("base64")
+            .replace(/[^A-Za-z0-9]/g, "")
+            .slice(0, length) || "Welcome@123";
+    }
+
+    async ensureEmployeeUserRecord({
+        email,
+        fullName,
+        employeeCode,
+        phone,
+        erpRole,
+        transaction,
+    }) {
+        const normalizedEmail = String(email || "").trim().toLowerCase();
+        if (!normalizedEmail) {
+            return null;
+        }
+
+        const roleCode = this.normalizeUserRoleCode(erpRole);
+        const role = await db.Role.findOne({
+            where: { code: roleCode },
+            paranoid: false,
+            transaction,
+        });
+
+        let user = await db.User.findOne({
+            where: { email: normalizedEmail },
+            paranoid: false,
+            transaction,
+        });
+
+        if (user) {
+            if (employeeCode && !user.employeeRecord) {
+                await user.update(
+                    {
+                        employeeRecord: String(employeeCode).trim(),
+                        phone: phone || user.phone,
+                    },
+                    { transaction }
+                );
+            }
+
+            if (role) {
+                const existingLink = await db.UserRole.findOne({
+                    where: {
+                        userId: user.id,
+                        roleId: role.id,
+                    },
+                    transaction,
+                });
+
+                if (!existingLink) {
+                    await db.UserRole.create(
+                        {
+                            userId: user.id,
+                            roleId: role.id,
+                        },
+                        { transaction }
+                    );
+                }
+            }
+
+            return { user, created: false, password: null };
+        }
+
+        const password = this.generateRandomPassword();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const nameParts = String(fullName || "Employee").trim().split(/\s+/).filter(Boolean);
+        const firstName = nameParts[0] || "Employee";
+        const lastName = nameParts.slice(1).join(" ") || null;
+
+        let username = firstName.toLowerCase();
+        let usernameIndex = 1;
+        while (await db.User.findOne({ where: { username }, paranoid: false, transaction })) {
+            username = `${firstName.toLowerCase()}${usernameIndex}`;
+            usernameIndex += 1;
+        }
+
+        user = await db.User.create(
+            {
+                firstName,
+                lastName,
+                email: normalizedEmail,
+                username,
+                phone: phone || null,
+                employeeRecord: String(employeeCode || "").trim() || null,
+                password: hashedPassword,
+                isActive: true,
+            },
+            { transaction }
+        );
+
+        if (role) {
+            await db.UserRole.create(
+                {
+                    userId: user.id,
+                    roleId: role.id,
+                },
+                { transaction }
+            );
+        }
+
+        return { user, created: true, password };
     }
 
     buildOnboardingInfoPayload(
@@ -506,6 +642,10 @@ class OnboardingService extends BaseService {
         const currentAddress = formData.currentAddress || {};
         const permanentAddress = formData.permanentAddress || {};
         const icebreaker = formData.icebreaker || {};
+        const fullName = this.normalizeFullName(formData, personal?.fullName || "");
+        const nameParts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
 
         const today = new Date().toISOString().slice(0, 10);
         const officialEmail =
@@ -561,8 +701,8 @@ class OnboardingService extends BaseService {
             academicid: academicId,
 
             employeeId: formData.employeeId || null,
-            firstName: formData.firstName || null,
-            lastName: formData.lastName || null,
+            firstName: firstName || null,
+            lastName: lastName || null,
             nickName: formData.nickName || null,
             personalEmail: formData.personalEmail || personal.email || null,
             personalPhone: formData.personalPhone || personal.phoneNumber || null,
@@ -765,17 +905,77 @@ class OnboardingService extends BaseService {
     }
 
     async persistLinkedOnboardingSections(cifid, formData, personal, transaction) {
-        const academicTop = await db.CifAcademic.findOne({
+        const educationEntries = Array.isArray(formData?.education)
+            ? formData.education
+            : [];
+        const experienceEntries = Array.isArray(formData?.experience)
+            ? formData.experience
+            : [];
+
+        let academicTop = await db.CifAcademic.findOne({
             where: { cifid },
             order: [["academicid", "DESC"]],
             transaction,
         });
 
-        const experienceTop = await db.CifExperience.findOne({
+        if (!academicTop) {
+            const educationEntry = educationEntries[0] || {};
+            const institutionValue = String(
+                educationEntry.institution || educationEntry.board || "N/A"
+            ).trim() || "N/A";
+            academicTop = await db.CifAcademic.create(
+                {
+                    candidateId: cifid,
+                    cifid,
+                    degree: String(educationEntry.qualification || "N/A").trim() || "N/A",
+                    institution: institutionValue,
+                    university: institutionValue,
+                    graduationYear: Number(educationEntry.year) || new Date().getFullYear(),
+                    grade: String(educationEntry.percentage || "N/A").trim() || "N/A",
+                    city: String(
+                        personal?.city ||
+                            formData?.currentAddress?.city ||
+                            "N/A"
+                    ).trim() || "N/A",
+                },
+                { transaction }
+            );
+        }
+
+        let experienceTop = await db.CifExperience.findOne({
             where: { cifid },
             order: [["eid", "DESC"]],
             transaction,
         });
+
+        if (!experienceTop) {
+            const experienceEntry = experienceEntries[0] || {};
+            const experienceRole = String(
+                experienceEntry.designation || "N/A"
+            ).trim() || "N/A";
+            experienceTop = await db.CifExperience.create(
+                {
+                    candidateId: cifid,
+                    cifid,
+                    companyName:
+                        String(experienceEntry.company || "N/A").trim() || "N/A",
+                    location:
+                        String(
+                            experienceEntry.location ||
+                                formData?.currentAddress?.city ||
+                                personal?.city ||
+                                "N/A"
+                        ).trim() || "N/A",
+                    designation: experienceRole,
+                    role: experienceRole,
+                    startDate: experienceEntry.startDate || new Date().toISOString().slice(0, 10),
+                    endDate: experienceEntry.endDate || null,
+                    totalExperience: this.parseExperienceTotal(experienceEntry.totalExp),
+                    reasonForLeaving: String(experienceEntry.reason || "").trim() || null,
+                },
+                { transaction }
+            );
+        }
 
         const defaultDepartment = await db.Department.findOne({
             attributes: ["id"],
@@ -988,6 +1188,31 @@ class OnboardingService extends BaseService {
         }
     }
 
+    isEmployeeIdDuplicate({ candidateEmployeeId, currentOfficialEmail, cifid, duplicateEmployee, duplicateOnboarding }) {
+        if (!candidateEmployeeId) {
+            return false;
+        }
+
+        const normalizedCurrentEmail = String(currentOfficialEmail || "").trim().toLowerCase();
+
+        if (duplicateEmployee) {
+            const sameEmployeeEmail = String(duplicateEmployee.email || "").trim().toLowerCase() === normalizedCurrentEmail;
+            const sameCifId = Number(duplicateEmployee.cifid || duplicateEmployee.candidateId || duplicateEmployee.cifId) === Number(cifid);
+            if (sameEmployeeEmail || sameCifId) {
+                return false;
+            }
+        }
+
+        if (duplicateOnboarding) {
+            const sameCandidate = Number(duplicateOnboarding.cifid) === Number(cifid);
+            if (sameCandidate) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     async saveRecord(payload) {
         const cifid = Number(payload?.cifid);
         const status = this.normalizeStatus(payload?.status);
@@ -1013,6 +1238,34 @@ class OnboardingService extends BaseService {
 
             if (!String(formData.employeeId || "").trim()) {
                 formData.employeeId = await this.getNextEmployeeId();
+            }
+
+            const candidateEmployeeId = String(formData.employeeId || "").trim();
+            if (candidateEmployeeId) {
+                const duplicate = await db.Employee.findOne({
+                    where: { employeeCode: candidateEmployeeId },
+                    paranoid: false,
+                });
+
+                const duplicateOnboarding = await db.OnboardingInfo.findOne({
+                    where: { employeeId: candidateEmployeeId },
+                    paranoid: false,
+                });
+
+                const shouldRejectDuplicate = this.isEmployeeIdDuplicate({
+                    candidateEmployeeId,
+                    currentOfficialEmail: formData.officialEmail || formData.personalEmail || "",
+                    cifid,
+                    duplicateEmployee: duplicate,
+                    duplicateOnboarding,
+                });
+
+                if (shouldRejectDuplicate) {
+                    const error = new Error("Employee ID is already assigned to another employee. Please use a different ID.");
+                    error.status = 400;
+                    error.code = "EMPLOYEE_ID_ALREADY_EXISTS";
+                    throw error;
+                }
             }
         }
 
@@ -1117,9 +1370,7 @@ class OnboardingService extends BaseService {
                 throw new Error("CIF personal record not found.");
             }
 
-            const fullName = `${String(formData.firstName || "").trim()} ${String(
-                formData.lastName || ""
-            ).trim()}`.trim();
+            const fullName = this.normalizeFullName(formData, personal.fullName || "");
             const currentAddress = formData.currentAddress || {};
             const addressValue = [currentAddress.line1, currentAddress.line2]
                 .filter((item) => Boolean(String(item || "").trim()))
@@ -1150,14 +1401,21 @@ class OnboardingService extends BaseService {
 
             if (Array.isArray(formData.education)) {
                 const educationRows = formData.education
-                    .map((edu) => ({
-                        cifid,
-                        degree: String(edu?.qualification || "").trim(),
-                        university: String(edu?.institution || edu?.board || "").trim(),
-                        graduationYear: Number(edu?.year),
-                        grade: String(edu?.percentage || "N/A").trim(),
-                        city: String(currentAddress.city || personal.city || "N/A").trim(),
-                    }))
+                    .map((edu) => {
+                        const institution = String(
+                            edu?.institution || edu?.board || ""
+                        ).trim();
+                        return {
+                            candidateId: cifid,
+                            cifid,
+                            degree: String(edu?.qualification || "").trim(),
+                            institution,
+                            university: institution,
+                            graduationYear: Number(edu?.year),
+                            grade: String(edu?.percentage || "N/A").trim(),
+                            city: String(currentAddress.city || personal.city || "N/A").trim(),
+                        };
+                    })
                     .filter(
                         (row) =>
                             row.degree &&
@@ -1187,18 +1445,23 @@ class OnboardingService extends BaseService {
 
             if (Array.isArray(formData.experience)) {
                 const experienceRows = formData.experience
-                    .map((exp) => ({
-                        cifid,
-                        companyName: String(exp?.company || "").trim(),
-                        location: String(
-                            exp?.location || currentAddress.city || personal.city || "N/A"
-                        ).trim(),
-                        role: String(exp?.designation || "").trim(),
-                        startDate: exp?.startDate || null,
-                        endDate: exp?.endDate || null,
-                        totalExperience: this.parseExperienceTotal(exp?.totalExp),
-                        reasonForLeaving: String(exp?.reason || "").trim() || null,
-                    }))
+                    .map((exp) => {
+                        const role = String(exp?.designation || "").trim();
+                        return {
+                            candidateId: cifid,
+                            cifid,
+                            companyName: String(exp?.company || "").trim(),
+                            location: String(
+                                exp?.location || currentAddress.city || personal.city || "N/A"
+                            ).trim(),
+                            designation: role,
+                            role,
+                            startDate: exp?.startDate || null,
+                            endDate: exp?.endDate || null,
+                            totalExperience: this.parseExperienceTotal(exp?.totalExp),
+                            reasonForLeaving: String(exp?.reason || "").trim() || null,
+                        };
+                    })
                     .filter(
                         (row) =>
                             row.companyName &&
@@ -1339,8 +1602,17 @@ class OnboardingService extends BaseService {
                 if (existingEmployee) {
                     await existingEmployee.update(employeePayload, { transaction });
                 } else {
-                    await db.Employee.create(employeePayload, { transaction });
+                    existingEmployee = await db.Employee.create(employeePayload, { transaction });
                 }
+
+                await this.ensureEmployeeUserRecord({
+                    email: officialEmail,
+                    fullName: fullName || personal.fullName || "Employee",
+                    employeeCode: employeeCode || existingEmployee?.employeeCode || "",
+                    phone: String(formData.officePhone || formData.personalPhone || personal.phoneNumber || "").trim() || null,
+                    erpRole: formData.erpRole || "TEAM_MEMBER",
+                    transaction,
+                });
             }
 
             return onboardingRecord;
@@ -1357,6 +1629,43 @@ class OnboardingService extends BaseService {
             ...payload,
             cifid: parsedCifId,
         });
+    }
+
+    async getRecordByEmployeeCode(employeeCode) {
+        const normalizedEmployeeCode = String(employeeCode || "").trim();
+        if (!normalizedEmployeeCode) {
+            return null;
+        }
+
+        const linkedInfo = await db.OnboardingInfo.findOne({
+            where: { employeeId: normalizedEmployeeCode },
+        });
+
+        if (linkedInfo?.cifid) {
+            return this.getRecordByCifId(linkedInfo.cifid);
+        }
+
+        const records = await db.OnboardingRecord.findAll();
+        const match = records.find((record) => {
+            const formData = record?.formData || {};
+            const candidateValues = [
+                formData.employeeId,
+                formData.employeeID,
+                formData.employeeCode,
+                record?.employeeId,
+                record?.employeeCode,
+            ];
+
+            return candidateValues.some((value) =>
+                String(value || "").trim().toUpperCase() === normalizedEmployeeCode.toUpperCase()
+            );
+        });
+
+        if (!match?.cifid) {
+            return null;
+        }
+
+        return this.getRecordByCifId(match.cifid);
     }
 
     async getRecordByCifId(cifid) {
@@ -1386,7 +1695,24 @@ class OnboardingService extends BaseService {
             documentRows,
         ] = await Promise.all([
             db.OnboardingRecord.findOne({ where: { cifid: parsedCifId } }),
-            db.CifPersonal.findByPk(parsedCifId),
+            db.CifPersonal.findByPk(parsedCifId, {
+                include: [
+                    {
+                        model: db.Opening,
+                        as: "opening",
+                        required: false,
+                        attributes: ["jobid", "jobTitle", "departmentId"],
+                        include: [
+                            {
+                                model: db.Department,
+                                as: "department",
+                                required: false,
+                                attributes: ["id", "name"],
+                            },
+                        ],
+                    },
+                ],
+            }),
             onboardingInfoPromise,
             db.OnboardingHealth.findOne({ where: { cifid: parsedCifId } }),
             db.OnboardingBank.findOne({ where: { cifid: parsedCifId } }),
@@ -1400,22 +1726,26 @@ class OnboardingService extends BaseService {
             this.getOnboardingDocumentRows(parsedCifId),
         ]);
 
-        if (!record && !onboardingInfo) {
+        if (!record && !onboardingInfo && !personal) {
             return null;
         }
 
         const existingData = record?.formData || {};
+        const fallbackFullName = this.normalizeFullName(existingData, personal?.fullName || "");
+        const nameParts = String(fallbackFullName || "").trim().split(/\s+/).filter(Boolean);
         const formData = {
             ...existingData,
+            fullName:
+                onboardingInfo?.firstName || existingData.fullName || fallbackFullName || personal?.fullName || "",
             firstName:
                 onboardingInfo?.firstName ||
                 existingData.firstName ||
-                String(personal?.fullName || "").split(" ")[0] ||
+                nameParts[0] ||
                 "",
             lastName:
                 onboardingInfo?.lastName ||
                 existingData.lastName ||
-                String(personal?.fullName || "").split(" ").slice(1).join(" ") ||
+                nameParts.slice(1).join(" ") ||
                 "",
             nickName: onboardingInfo?.nickName || existingData.nickName || "",
             employeeId: onboardingInfo?.employeeId || existingData.employeeId || "",
@@ -1448,11 +1778,23 @@ class OnboardingService extends BaseService {
             erpRole: onboardingInfo?.erprole || existingData.erpRole || "",
             sourceOfHire:
                 onboardingInfo?.hiresource || existingData.sourceOfHire || "",
-            department: onboardingInfo?.department || existingData.department || "",
+            department:
+                onboardingInfo?.department ||
+                existingData.department ||
+                personal?.opening?.department?.name ||
+                personal?.departmentName ||
+                personal?.department ||
+                "",
             permanent: onboardingInfo?.permanent || existingData.permanent || "",
             manager: onboardingInfo?.manager || existingData.manager || "",
             referral: onboardingInfo?.referral || existingData.referral || "",
-            designation: onboardingInfo?.designation || existingData.designation || "",
+            designation:
+                onboardingInfo?.designation ||
+                existingData.designation ||
+                personal?.opening?.jobTitle ||
+                personal?.jobTitle ||
+                personal?.designation ||
+                "",
             reportingHead:
                 onboardingInfo?.reportHead || existingData.reportingHead || "",
             uanNumber: onboardingInfo?.uanno || existingData.uanNumber || "",
@@ -1465,6 +1807,8 @@ class OnboardingService extends BaseService {
                 line1:
                     onboardingInfo?.currentAddressLine1 ||
                     existingData.currentAddress?.line1 ||
+                    personal?.currentAddress ||
+                    personal?.address ||
                     "",
                 line2:
                     onboardingInfo?.currentAddressLine2 ||
@@ -1473,16 +1817,19 @@ class OnboardingService extends BaseService {
                 city:
                     onboardingInfo?.currentCity ||
                     existingData.currentAddress?.city ||
+                    personal?.currentCity ||
                     personal?.city ||
                     "",
                 state:
                     onboardingInfo?.currentState ||
                     existingData.currentAddress?.state ||
+                    personal?.currentState ||
                     personal?.state ||
                     "",
                 pincode:
                     onboardingInfo?.currentPincode ||
                     existingData.currentAddress?.pincode ||
+                    personal?.currentPincode ||
                     personal?.pinCode ||
                     "",
             },
@@ -1490,6 +1837,7 @@ class OnboardingService extends BaseService {
                 line1:
                     onboardingInfo?.permanentAddressLine1 ||
                     existingData.permanentAddress?.line1 ||
+                    personal?.permanentAddress ||
                     "",
                 line2:
                     onboardingInfo?.permanentAddressLine2 ||
@@ -1498,14 +1846,17 @@ class OnboardingService extends BaseService {
                 city:
                     onboardingInfo?.permanentCity ||
                     existingData.permanentAddress?.city ||
+                    personal?.permanentCity ||
                     "",
                 state:
                     onboardingInfo?.permanentState ||
                     existingData.permanentAddress?.state ||
+                    personal?.permanentState ||
                     "",
                 pincode:
                     onboardingInfo?.permanentPincode ||
                     existingData.permanentAddress?.pincode ||
+                    personal?.permanentPincode ||
                     "",
             },
 

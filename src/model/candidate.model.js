@@ -14,7 +14,6 @@ module.exports = (sequelize, DataTypes) => {
             email: {
                 type: DataTypes.STRING(150),
                 allowNull: false,
-                unique: true,
                 validate: {
                     isEmail: true,
                 },
@@ -113,6 +112,13 @@ module.exports = (sequelize, DataTypes) => {
             tableName: "candidates",
             timestamps: true,
             paranoid: true,
+            indexes: [
+                {
+                    unique: true,
+                    fields: ["email", "appliedPosition"],
+                    name: "candidates_email_applied_position_unique",
+                },
+            ],
         }
     );
 

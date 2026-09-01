@@ -76,7 +76,21 @@ app.get("/", (req, res, next) => {
 const buildPath = path.join(__dirname, "build");
 const uploadsPath = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "uploads"));
 if (fs.existsSync(uploadsPath)) {
-    app.use("/uploads", express.static(uploadsPath));
+    app.use("/uploads", express.static(uploadsPath, {
+        setHeaders: (res, filePath) => {
+            const extension = path.extname(filePath).toLowerCase();
+            const downloadableExtensions = [
+                ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                ".txt", ".csv", ".zip", ".rar", ".jpg", ".jpeg", ".png",
+                ".gif"
+            ];
+
+            if (downloadableExtensions.includes(extension)) {
+                const fileName = path.basename(filePath);
+                res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+            }
+        },
+    }));
 }
 const assetsPath = path.join(__dirname, "assets");
 if (fs.existsSync(assetsPath)) {

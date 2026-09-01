@@ -1,14 +1,15 @@
-const { 
-  CifPersonal: cifPersonal, 
-  CifAcademic: cifAcademic, 
-  CifExperience: cifExperience, 
-  CifSkill: cifSkill, 
-  CifSoftware: cifSoftware, 
-  CifLanguage: cifLanguage, 
+const {
+  CifPersonal: cifPersonal,
+  CifAcademic: cifAcademic,
+  CifExperience: cifExperience,
+  CifSkill: cifSkill,
+  CifSoftware: cifSoftware,
+  CifLanguage: cifLanguage,
   CifReference: cifReference,
   CifSubmission: cifSubmission,
   Opening: opening,
-  Recruitment: recruitment
+  Recruitment: recruitment,
+  Department: department
 } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
@@ -52,14 +53,14 @@ const getApplicationStatus = (submission) => {
 
 // Create full submission
 exports.create = asyncHandler(async (req, res) => {
-  let { 
-    personal, 
-    academics, 
-    experiences, 
-    skills, 
-    softwares, 
-    languages, 
-    references 
+  let {
+    personal,
+    academics,
+    experiences,
+    skills,
+    softwares,
+    languages,
+    references
   } = req.body;
 
   try {
@@ -74,11 +75,54 @@ exports.create = asyncHandler(async (req, res) => {
     return ApiResponse.error(res, "Invalid JSON data in form fields", null, 400);
   }
 
+  if (personal?.pinCode && !/^\d{6}$/.test(String(personal.pinCode).trim())) {
+    return ApiResponse.error(res, "PIN code must contain exactly 6 digits.", null, 400);
+  }
+
+  academics = (academics || []).filter((item) => (
+    item.degree && item.university && /^\d{4}$/.test(String(item.graduationYear).trim())
+  ));
+  const invalidExperience = (experiences || []).find((item) => {
+    const started = [item.companyName, item.location, item.role, item.startDate, item.endDate]
+      .some((value) => String(value || '').trim());
+    return started && (!item.companyName || !item.location || !item.role || !item.startDate);
+  });
+  if (invalidExperience) {
+    return ApiResponse.error(
+      res,
+      "Employer, location, job title, and start date are required for each experience entry.",
+      null,
+      400
+    );
+  }
+  experiences = (experiences || []).filter((item) => item.companyName && item.location && item.role && item.startDate);
+  skills = (skills || []).filter((item) => item.skillName && item.skillLevel);
+  softwares = (softwares || []).filter((item) => (item.toolName || item.tools) && (item.proficiencyLevel || item.levels));
+  languages = (languages || []).filter((item) => (
+    (item.languageName || item.language)
+    && (item.speakLevel || item.Speak)
+    && (item.readLevel || item.Read)
+    && (item.writeLevel || item.Write)
+  ));
+  references = (references || []).filter((item) => item.referenceName && item.referenceEmail && item.referencePhone);
+
   // Start transaction
   const sequelize = require("../model").sequelize;
   const transaction = await sequelize.transaction();
 
   try {
+    const existingEmail = await cifPersonal.findOne({
+      where: {
+        email: personal.email,
+        appliedPosition: personal.appliedPosition || null,
+      },
+      transaction,
+    });
+    if (existingEmail) {
+      await transaction.rollback();
+      return ApiResponse.error(res, "Email already exists for this role.", null, 409);
+    }
+
     // 1. Create Personal
     const personalData = await cifPersonal.create(personal, { transaction });
 
@@ -175,13 +219,22 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
   const submissions = await cifPersonal.findAll({
     include: [
       {
-          model: opening,
-          as: "opening",
-          required: false,
-          attributes: [
-              "jobid",
-              "jobTitle"
-          ]
+        model: opening,
+        as: "opening",
+        required: false,
+        attributes: [
+          "jobid",
+          "jobTitle",
+          "departmentId"
+        ],
+        include: [
+          {
+            model: department,
+            as: "department",
+            required: false,
+            attributes: ["id", "name"]
+          }
+        ]
       },
       {
         model: cifAcademic,
@@ -232,55 +285,55 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
     order: [['createdAt', 'DESC']]
   });
 
-  
+
   const formattedSubmissions = submissions.map(sub => {
     const plainSub = sub.toJSON();
     useLatestRecruitment(plainSub);
     plainSub.status = getApplicationStatus(plainSub.submission);
-    
+
     if (plainSub.recruitment) {
-        plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
-        plainSub.interviewMode = plainSub.recruitment.interviewMode;
-        plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
-        plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
-        plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
-        plainSub.statusNote = plainSub.recruitment.statusChangeNote;
-        if (plainSub.recruitment.recruitmentStatus) {
-            plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
-            plainSub.status = plainSub.recruitment.recruitmentStatus;
-        } else {
-            plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
-        }
-        if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
-            plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
-                user: "System",
-                action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
-                date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
-                time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
-                hrFeedback: historyItem.hrScreeningFeedback,
-                technicalFeedback: historyItem.technicalInterviewFeedback,
-                mdFeedback: historyItem.mdFeedback,
-                statusNote: historyItem.statusChangeNote,
-                interviewMode: historyItem.interviewMode
-            })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
-        } else {
-            plainSub.history = [
-                {
-                    user: "System",
-                    action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
-                    date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
-                    time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
-                    hrFeedback: plainSub.recruitment.hrScreeningFeedback,
-                    technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
-                    mdFeedback: plainSub.recruitment.mdFeedback,
-                    statusNote: plainSub.recruitment.statusChangeNote,
-                    interviewMode: plainSub.recruitment.interviewMode
-                }
-            ];
-        }
-    } else {
+      plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
+      plainSub.interviewMode = plainSub.recruitment.interviewMode;
+      plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
+      plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
+      plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
+      plainSub.statusNote = plainSub.recruitment.statusChangeNote;
+      if (plainSub.recruitment.recruitmentStatus) {
+        plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
+        plainSub.status = plainSub.recruitment.recruitmentStatus;
+      } else {
         plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
-        plainSub.history = [];
+      }
+      if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
+        plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
+          user: "System",
+          action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
+          date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
+          time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
+          hrFeedback: historyItem.hrScreeningFeedback,
+          technicalFeedback: historyItem.technicalInterviewFeedback,
+          mdFeedback: historyItem.mdFeedback,
+          statusNote: historyItem.statusChangeNote,
+          interviewMode: historyItem.interviewMode
+        })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+      } else {
+        plainSub.history = [
+          {
+            user: "System",
+            action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+            date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
+            time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
+            hrFeedback: plainSub.recruitment.hrScreeningFeedback,
+            technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
+            mdFeedback: plainSub.recruitment.mdFeedback,
+            statusNote: plainSub.recruitment.statusChangeNote,
+            interviewMode: plainSub.recruitment.interviewMode
+          }
+        ];
+      }
+    } else {
+      plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
+      plainSub.history = [];
     }
     return plainSub;
   });
@@ -305,50 +358,50 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
   const plainSub = submission.toJSON();
   useLatestRecruitment(plainSub);
   plainSub.status = getApplicationStatus(plainSub.submission);
-  
+
   if (plainSub.recruitment) {
-      plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
-      plainSub.interviewMode = plainSub.recruitment.interviewMode;
-      plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
-      plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
-      plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
-      plainSub.statusNote = plainSub.recruitment.statusChangeNote;
-      if (plainSub.recruitment.recruitmentStatus) {
-          plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
-          plainSub.status = plainSub.recruitment.recruitmentStatus;
-      } else {
-          plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
-      }
-      if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
-          plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
-              user: "System",
-              action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
-              date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
-              time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
-              hrFeedback: historyItem.hrScreeningFeedback,
-              technicalFeedback: historyItem.technicalInterviewFeedback,
-              mdFeedback: historyItem.mdFeedback,
-              statusNote: historyItem.statusChangeNote,
-              interviewMode: historyItem.interviewMode
-          })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
-      } else {
-          plainSub.history = [
-              {
-                  user: "System",
-                  action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
-                  date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
-                  time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
-                  hrFeedback: plainSub.recruitment.hrScreeningFeedback,
-                  technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
-                  mdFeedback: plainSub.recruitment.mdFeedback,
-                  statusNote: plainSub.recruitment.statusChangeNote,
-                  interviewMode: plainSub.recruitment.interviewMode
-              }
-          ];
-      }
-  } else {
+    plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
+    plainSub.interviewMode = plainSub.recruitment.interviewMode;
+    plainSub.hrFeedback = plainSub.recruitment.hrScreeningFeedback;
+    plainSub.technicalFeedback = plainSub.recruitment.technicalInterviewFeedback;
+    plainSub.mdFeedback = plainSub.recruitment.mdFeedback;
+    plainSub.statusNote = plainSub.recruitment.statusChangeNote;
+    if (plainSub.recruitment.recruitmentStatus) {
+      plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
+      plainSub.status = plainSub.recruitment.recruitmentStatus;
+    } else {
       plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
-      plainSub.history = [];
+    }
+    if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
+      plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
+        user: "System",
+        action: historyItem.recruitmentStatus ? `Status: ${historyItem.recruitmentStatus}` : "Updated details",
+        date: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleDateString(),
+        time: new Date(historyItem.updatedAt || historyItem.createdAt).toLocaleTimeString(),
+        hrFeedback: historyItem.hrScreeningFeedback,
+        technicalFeedback: historyItem.technicalInterviewFeedback,
+        mdFeedback: historyItem.mdFeedback,
+        statusNote: historyItem.statusChangeNote,
+        interviewMode: historyItem.interviewMode
+      })).sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+    } else {
+      plainSub.history = [
+        {
+          user: "System",
+          action: plainSub.recruitment.recruitmentStatus ? `Status: ${plainSub.recruitment.recruitmentStatus}` : "Updated details",
+          date: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleDateString(),
+          time: new Date(plainSub.recruitment.updatedAt || plainSub.recruitment.createdAt).toLocaleTimeString(),
+          hrFeedback: plainSub.recruitment.hrScreeningFeedback,
+          technicalFeedback: plainSub.recruitment.technicalInterviewFeedback,
+          mdFeedback: plainSub.recruitment.mdFeedback,
+          statusNote: plainSub.recruitment.statusChangeNote,
+          interviewMode: plainSub.recruitment.interviewMode
+        }
+      ];
+    }
+  } else {
+    plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
+    plainSub.history = [];
   }
 
   return ApiResponse.success(
@@ -392,13 +445,22 @@ async function getCompleteSubmission(cifid) {
   return await cifPersonal.findByPk(cifid, {
     include: [
       {
-          model: opening,
-          as: "opening",
-          required: false,
-          attributes: [
-              "jobid",
-              "jobTitle"
-          ]
+        model: opening,
+        as: "opening",
+        required: false,
+        attributes: [
+          "jobid",
+          "jobTitle",
+          "departmentId"
+        ],
+        include: [
+          {
+            model: department,
+            as: "department",
+            required: false,
+            attributes: ["id", "name"]
+          }
+        ]
       },
       {
         model: cifAcademic,

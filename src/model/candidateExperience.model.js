@@ -2,14 +2,10 @@ module.exports = (sequelize, DataTypes) => {
     const CandidateExperience = sequelize.define(
         "CandidateExperience",
         {
-            id: {
+            eid: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
-            },
-            eid: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
                 field: "id",
             },
             candidateId: {

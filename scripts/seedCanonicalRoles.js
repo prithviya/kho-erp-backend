@@ -28,6 +28,12 @@ const CANONICAL_ROLES = [
         description: "Hiring, onboarding, payroll, and employee operations",
         aliases: ["hr"],
     },
+    {
+        code: "TEAM_MEMBER",
+        name: "Team Member",
+        description: "General team member role",
+        aliases: ["teammember", "team_member", "team member"],
+    }
 ];
 
 function normalizeRole(value = "") {

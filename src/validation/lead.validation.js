@@ -11,7 +11,7 @@ exports.createLeadValidation = [
 
     body("phone")
         .notEmpty().withMessage("Phone number is required.")
-        .isMobilePhone().withMessage("Invalid phone number."),
+        .matches(/^\d{10}$/).withMessage("Phone number must contain exactly 10 digits."),
 
     body("email")
         .notEmpty().withMessage("Email is required.")
@@ -57,7 +57,7 @@ exports.updateLeadValidation = [
 
     body("phone")
         .optional()
-        .isMobilePhone().withMessage("Invalid phone number."),
+        .matches(/^\d{10}$/).withMessage("Phone number must contain exactly 10 digits."),
 
     body("email")
         .optional()

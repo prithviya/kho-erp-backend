@@ -55,6 +55,31 @@ exports.getRecordByCifId = asyncHandler(async (req, res) => {
     );
 });
 
+exports.getRecordByEmployeeCode = asyncHandler(async (req, res) => {
+    const employeeCode = String(
+        req.params.employeeCode ||
+        req.params.employee_code ||
+        req.query.employee_code ||
+        req.query.employeeCode ||
+        ""
+    ).trim();
+
+    if (!employeeCode) {
+        return ApiResponse.error(res, "A valid employee code is required.", null, 400);
+    }
+
+    const record = await onboarding.getRecordByEmployeeCode(employeeCode);
+    if (!record) {
+        return ApiResponse.error(res, "No onboarding record found for this employee code.", null, 404);
+    }
+
+    return ApiResponse.success(
+        res,
+        "Onboarding record fetched successfully.",
+        record
+    );
+});
+
 exports.getAllRecords = asyncHandler(async (_req, res) => {
     const records = await onboarding.getAllRecords();
 
