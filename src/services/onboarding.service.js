@@ -204,7 +204,7 @@ class OnboardingService extends BaseService {
             .toUpperCase();
 
         const isSelectedFromRecruitment = recruitmentStatus === "selected";
-        const isSelectedFromApplication = ["OFFERED", "JOINED", "SHORTLISTED"].includes(
+        const isSelectedFromApplication = ["OFFERED", "JOINED"].includes(
             applicationStatus
         );
 

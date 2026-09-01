@@ -7,6 +7,7 @@ const {
     CifSoftware,
     CifSkill,
     CifReference,
+    CifSubmission,
 } = require("../model");
 
 const required = (value, message) => {
@@ -36,6 +37,10 @@ class CifSubmissionService {
             Shortlisted: "Shortlisted",
             Selected: "Selected",
             Rejected: "Rejected",
+            APPLIED: "Pending",
+            applied: "Pending",
+            OFFERED: "Selected",
+            offered: "Selected",
             shortlist: "Shortlisted",
             shortlisted: "Shortlisted",
             selected: "Selected",
@@ -53,17 +58,16 @@ class CifSubmissionService {
             throw new Error("Valid CIF ID is required.");
         }
 
-        let submission = await sequelize.models.cifSubmission.findOne({
+        let submission = await CifSubmission.findOne({
             where: { candidateId: parsedCifId },
             transaction,
         });
 
         if (!submission) {
-            submission = await sequelize.models.cifSubmission.create(
+            submission = await CifSubmission.create(
                 {
                     candidateId: parsedCifId,
-                    cifid: parsedCifId,
-                    appliedStatus: "Pending",
+                    status: "APPLIED",
                 },
                 { transaction }
             );
@@ -82,7 +86,7 @@ class CifSubmissionService {
 
         return sequelize.transaction(async (transaction) => {
             const submission = await this.ensureSubmission(cifid, transaction);
-            const currentStatus = this.normalizeStatus(submission.appliedStatus);
+            const currentStatus = this.normalizeStatus(submission.appliedStatus || submission.status);
 
             if (status === "Selected" && ["Rejected"].includes(currentStatus)) {
                 throw new Error("Rejected applications cannot be moved to selected.");
@@ -96,15 +100,22 @@ class CifSubmissionService {
                 throw new Error("Selected applications cannot be rejected.");
             }
 
-            submission.appliedStatus = status;
+            const storedStatus = {
+                Pending: "APPLIED",
+                Shortlisted: "SHORTLISTED",
+                Selected: "OFFERED",
+                Rejected: "REJECTED",
+            }[status];
+            submission.status = storedStatus;
             await submission.save({ transaction });
+            submission.appliedStatus = status;
             return submission;
         });
     }
 
     async canProceedToOnboarding(cifid, transaction) {
-        const submission = await sequelize.models.cifSubmission.findOne({
-            where: { cifid: Number(cifid) },
+        const submission = await CifSubmission.findOne({
+            where: { candidateId: Number(cifid) },
             transaction,
         });
 

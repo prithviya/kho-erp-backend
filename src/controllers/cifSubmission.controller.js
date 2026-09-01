@@ -12,6 +12,7 @@ const {
 } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
+const cifSubmissionService = require("../services/cifSubmission.service");
 
 const useLatestRecruitment = (submission) => {
   const history = Array.isArray(submission.recruitmentHistory)
@@ -27,6 +28,26 @@ const useLatestRecruitment = (submission) => {
 const normalizeLanguageLevel = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
   return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : normalized;
+};
+
+const getApplicationStatus = (submission) => {
+  const currentSubmission = Array.isArray(submission)
+    ? submission.reduce((latest, item) => (
+      !latest || new Date(item.updatedAt || item.createdAt) > new Date(latest.updatedAt || latest.createdAt)
+        ? item
+        : latest
+    ), null)
+    : submission;
+  const status = String(currentSubmission?.appliedStatus || currentSubmission?.status || "Pending")
+    .trim()
+    .toUpperCase();
+  return {
+    APPLIED: "Pending",
+    OFFERED: "Selected",
+    JOINED: "Selected",
+    SHORTLISTED: "Shortlisted",
+    REJECTED: "Rejected",
+  }[status] || currentSubmission?.appliedStatus || currentSubmission?.status || "Pending";
 };
 
 // Create full submission
@@ -215,7 +236,7 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
   const formattedSubmissions = submissions.map(sub => {
     const plainSub = sub.toJSON();
     useLatestRecruitment(plainSub);
-    plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+    plainSub.status = getApplicationStatus(plainSub.submission);
     
     if (plainSub.recruitment) {
         plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
@@ -228,7 +249,7 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
             plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
             plainSub.status = plainSub.recruitment.recruitmentStatus;
         } else {
-            plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+            plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
         }
         if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
             plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
@@ -258,7 +279,7 @@ exports.getAllSubmissions = asyncHandler(async (req, res) => {
             ];
         }
     } else {
-        plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+        plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
         plainSub.history = [];
     }
     return plainSub;
@@ -283,7 +304,7 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
 
   const plainSub = submission.toJSON();
   useLatestRecruitment(plainSub);
-  plainSub.status = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+  plainSub.status = getApplicationStatus(plainSub.submission);
   
   if (plainSub.recruitment) {
       plainSub.interviewDate = plainSub.recruitment.interviewDateTime ? new Date(plainSub.recruitment.interviewDateTime).toISOString().slice(0, 16) : null;
@@ -296,7 +317,7 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
           plainSub.appliedStatus = plainSub.recruitment.recruitmentStatus;
           plainSub.status = plainSub.recruitment.recruitmentStatus;
       } else {
-          plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+          plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
       }
       if (plainSub.recruitmentHistory && plainSub.recruitmentHistory.length > 0) {
           plainSub.history = plainSub.recruitmentHistory.map(historyItem => ({
@@ -326,7 +347,7 @@ exports.getSubmissionById = asyncHandler(async (req, res) => {
           ];
       }
   } else {
-      plainSub.appliedStatus = plainSub.submission ? plainSub.submission.appliedStatus : "Pending";
+      plainSub.appliedStatus = getApplicationStatus(plainSub.submission);
       plainSub.history = [];
   }
 
@@ -347,10 +368,10 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
 
     return ApiResponse.success(
       res,
-      `Application ${submission.appliedStatus.toLowerCase()} successfully.`,
+      `Application ${(submission.appliedStatus || submission.status || "Pending").toLowerCase()} successfully.`,
       {
         cifid,
-        status: submission.appliedStatus,
+        status: submission.appliedStatus || submission.status,
       }
     );
   } catch (error) {
@@ -360,6 +381,7 @@ exports.updateSubmissionStatus = asyncHandler(async (req, res) => {
     return ApiResponse.error(
       res,
       message,
+      null,
       statusCode
     );
   }
