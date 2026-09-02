@@ -2,6 +2,7 @@ require("dotenv").config();
 const app = require("./index");
 const logger = require("./src/helpers/logger");
 const connectDatabase = require("./src/helpers/database.helper");
+const seedStaticData = require("./seed");
 const requestLogger = require("./src/middleware/requestLogger");
 const PORT = process.env.PORT || 5000;
 app.use(requestLogger);
@@ -9,6 +10,12 @@ app.use(requestLogger);
     try {
         await connectDatabase();
         logger.info("✅ Database Connected");
+
+        const seeded = await seedStaticData();
+        if (seeded) {
+            logger.info("✅ Static seed data ensured");
+        }
+
         app.listen(PORT, () => {
             logger.info("================================");
             logger.info(`🚀 ERP API Running on Port ${PORT}`);

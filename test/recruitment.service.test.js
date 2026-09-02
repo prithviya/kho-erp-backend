@@ -31,7 +31,7 @@ test('recruitment create rejects a candidate ID that does not exist in the activ
   );
 });
 
-test('recruitment create creates a legacy cif record if missing, then stores the candidate id', async () => {
+test('recruitment create uses the active Candidate table and never queries the removed legacy table', async () => {
   db.Candidate.findByPk = async (id) => (id === 15 ? {
     id,
     fullName: 'Nandhu',
@@ -49,16 +49,8 @@ test('recruitment create creates a legacy cif record if missing, then stores the
     appliedPosition: 7,
   } : null);
 
-  db.sequelize.query = async (sql, options = {}) => {
-    if (String(sql).includes('SELECT cifid FROM cif_personals')) {
-      return [];
-    }
-
-    if (String(sql).includes('INSERT INTO cif_personals')) {
-      assert.deepEqual(options.replacements.cifid, 15);
-      return [{ affectedRows: 1 }];
-    }
-
+  db.sequelize.query = async (sql) => {
+    assert.ok(!String(sql).includes('cif_personals'), 'Legacy cif_personals table should not be queried');
     return [];
   };
 

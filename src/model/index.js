@@ -163,8 +163,7 @@ db.JobApplication = require("./jobApplication.model")(
     DataTypes
 );
 
-// Legacy compatibility aliases
-
+// Compatibility aliases for older request names
 db.CifPersonal = db.Candidate;
 db.CifAcademic = db.CandidateAcademic;
 db.CifExperience = db.CandidateExperience;
@@ -692,7 +691,7 @@ db.Candidate.hasMany(db.JobApplication, {
     as: "jobApplications",
 });
 
-// Legacy compatibility alias for older CIF submission queries
+// Backward-compatibility alias for older submission queries
 db.Candidate.hasMany(db.JobApplication, {
     foreignKey: "candidateId",
     sourceKey: "id",

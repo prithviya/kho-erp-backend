@@ -11,10 +11,6 @@ module.exports = (sequelize, DataTypes) => {
             cifid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
-                references: {
-                    model: "cif_personals",
-                    key: "cifid",
-                },
             },
 
             // Interview Details

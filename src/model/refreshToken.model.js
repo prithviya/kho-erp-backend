@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false
         },
         token: {
-            type: DataTypes.TEXT,
+            type: DataTypes.STRING(512),
             allowNull: false
         },
         deviceId: {
@@ -61,7 +61,7 @@ module.exports = (sequelize, DataTypes) => {
                 fields: ["userId"]
             },
             {
-                fields: ["token"]
+                fields: [{ name: "token", length: 255 }]
             },
             {
                 fields: ["isRevoked"]

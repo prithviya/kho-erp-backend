@@ -209,7 +209,7 @@ module.exports = (sequelize, DataTypes) => {
             },
         },
         {
-            tableName: "onboard_info",
+            tableName: "onboarding_info",
             timestamps: true,
             paranoid: true,
         }

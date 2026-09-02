@@ -10,19 +10,11 @@ module.exports = (sequelize, DataTypes) => {
             cifid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
-                references: {
-                    model: "cif_personals",
-                    key: "cifid",
-                },
             },
 
             onboardinginfoid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
-                references: {
-                    model: "onboard_info",
-                    key: "onboardinginfoid",
-                },
             },
 
 
