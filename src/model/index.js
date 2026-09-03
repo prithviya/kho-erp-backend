@@ -33,135 +33,43 @@ const sequelize = new Sequelize(
 
 const db = {};
 
-/*
-|--------------------------------------------------------------------------
-| USER / AUTH MODELS
-|--------------------------------------------------------------------------
-*/
+//  USER / AUTH MODELS
 
 db.User = require("./user.model")(sequelize, DataTypes);
 db.UserRole = require("./userRole.model")(sequelize, DataTypes);
 db.Role = require("./role.model")(sequelize, DataTypes);
 db.Permission = require("./permission.model")(sequelize, DataTypes);
-db.RolePermission = require("./rolePermission.model")(
-    sequelize,
-    DataTypes
-);
-db.Module = require("./module.model")(sequelize, DataTypes);
-db.RefreshToken = require("./refreshToken.model")(
-    sequelize,
-    DataTypes
-);
-db.PasswordResetToken = require("./passwordResetToken.model")(
-    sequelize,
-    DataTypes
-);
+db.RolePermission = require("./rolePermission.model")(  sequelize, DataTypes );
+db.Module = require("./module.model")(sequelize, DataTypes)
+db.RefreshToken = require("./refreshToken.model")( sequelize, DataTypes )
+db.PasswordResetToken = require("./passwordResetToken.model")( sequelize, DataTypes );
 
-/*
-|--------------------------------------------------------------------------
-| LEAD MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.LeadSource = require("./leadSource.model")(
-    sequelize,
-    DataTypes
-);
-
-db.LeadStatus = require("./leadStatus.model")(
-    sequelize,
-    DataTypes
-);
+//  LEAD MODELS
+db.LeadSource = require("./leadSource.model")( sequelize, DataTypes );
+db.LeadStatus = require("./leadStatus.model")( sequelize, DataTypes );
 
 db.Lead = require("./lead.model")(sequelize, DataTypes);
+db.LeadService = require("./leadService.model")( sequelize, DataTypes );
+db.LeadHistory = require("./leadHistory.model")( sequelize, DataTypes );
 
-db.LeadService = require("./leadService.model")(
-    sequelize,
-    DataTypes
-);
+//  SERVICE MODELS
+db.ServiceCategory = require("./serviceCategory.model")( sequelize, DataTypes );
+db.Service = require("./service.model")( sequelize, DataTypes );
 
-db.LeadHistory = require("./leadHistory.model")(
-    sequelize,
-    DataTypes
-);
+//  MASTER
+db.Department = require("./department.model")( sequelize, DataTypes );
+db.Vendor = require("./vendor.model")( sequelize, DataTypes );
 
-/*
-|--------------------------------------------------------------------------
-| SERVICE MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.ServiceCategory = require("./serviceCategory.model")(
-    sequelize,
-    DataTypes
-);
-
-db.Service = require("./service.model")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| MASTER
-|--------------------------------------------------------------------------
-*/
-
-db.Department = require("./department.model")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| CIF MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.Candidate = require("./candidate.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateAcademic = require("./candidateAcademic.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateExperience = require("./candidateExperience.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateLanguage = require("./candidateLanguage.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateReference = require("./candidateReference.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateSkill = require("./candidateSkill.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateSoftware = require("./candidateSoftware.model")(
-    sequelize,
-    DataTypes
-);
-
-db.CandidateDocument = require("./candidateDocument.model")(
-    sequelize,
-    DataTypes
-);
-
-db.JobApplication = require("./jobApplication.model")(
-    sequelize,
-    DataTypes
-);
+//  CIF MODELS
+db.Candidate = require("./candidate.model")( sequelize, DataTypes );
+db.CandidateAcademic = require("./candidateAcademic.model")( sequelize, DataTypes );
+db.CandidateExperience = require("./candidateExperience.model")( sequelize, DataTypes );
+db.CandidateLanguage = require("./candidateLanguage.model")( sequelize, DataTypes );
+db.CandidateReference = require("./candidateReference.model")( sequelize, DataTypes );
+db.CandidateSkill = require("./candidateSkill.model")( sequelize, DataTypes );
+db.CandidateSoftware = require("./candidateSoftware.model")( sequelize, DataTypes );
+db.CandidateDocument = require("./candidateDocument.model")( sequelize, DataTypes );
+db.JobApplication = require("./jobApplication.model")( sequelize, DataTypes );
 
 // Compatibility aliases for older request names
 db.CifPersonal = db.Candidate;
@@ -173,125 +81,33 @@ db.CifSkill = db.CandidateSkill;
 db.CifSoftware = db.CandidateSoftware;
 db.CifSubmission = db.JobApplication;
 
-/*
-|--------------------------------------------------------------------------
-| ONBOARDING MODELS
-|--------------------------------------------------------------------------
-*/
+//  ONBOARDING MODELS
+db.Onboarding = require("./onboarding.model")( sequelize, DataTypes );
+db.OnboardingInfo = require("./onboardinginfo.model")( sequelize, DataTypes );
+db.OnboardingRecord = require("./onboardingRecord.model")( sequelize, DataTypes );
+db.OnboardingEducation = require("./onboardingEducation.model")( sequelize, DataTypes );
+db.OnboardingExperience = require("./onboardingExperience.model")( sequelize, DataTypes );
+db.OnboardingHealth = require("./onboardingHealth.model")( sequelize, DataTypes );
+db.OnboardingBank = require("./onboardingBank.model")( sequelize, DataTypes );
+db.OnboardingDocument = require("./onboardingDocument.model")( sequelize, DataTypes );
+db.OnboardEquipment = require("./onboardEquipment.model")( sequelize, DataTypes );
+db.OnboardInduction = require("./onboardInduction.model")( sequelize, DataTypes );
+db.OnboardingOffice = require("./onboardingOfficeTour")( sequelize, DataTypes );
 
-db.Onboarding = require("./onboarding.model")(
-    sequelize,
-    DataTypes
-);
+//  RECRUITMENT
+db.Recruitment = require("./recruitment.model")( sequelize, DataTypes );
 
-db.OnboardingInfo = require("./onboardinginfo.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingRecord = require("./onboardingRecord.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingEducation = require("./onboardingEducation.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingExperience = require("./onboardingExperience.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingHealth = require("./onboardingHealth.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingBank = require("./onboardingBank.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingDocument = require("./onboardingDocument.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardEquipment = require("./onboardEquipment.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardInduction = require("./onboardInduction.model")(
-    sequelize,
-    DataTypes
-);
-
-db.OnboardingOffice = require("./onboardingOfficeTour")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| RECRUITMENT
-|--------------------------------------------------------------------------
-*/
-
-db.Recruitment = require("./recruitment.model")(
-    sequelize,
-    DataTypes
-);
-
-/*
-|--------------------------------------------------------------------------
-| OTHER MODELS
-|--------------------------------------------------------------------------
-*/
-
-db.Opening = require("./opening.model")(
-    sequelize,
-    DataTypes
-);
-
-db.ProjectOnboard = require("./projectOnboard.model")(
-    sequelize,
-    DataTypes
-);
-
-db.ProjectAssignment = require("./projectAssignment.model")(
-    sequelize,
-    DataTypes
-);
-
-db.Employee = require("./employee.model")(
-    sequelize,
-    DataTypes
-);
-
-db.Payroll = require("./payroll.model")(
-    sequelize,
-    DataTypes
-);
-
-db.LeaveCategory = require("./leaveCategory.model")(
-    sequelize,
-    DataTypes
-);
-
-db.LeaveRequest = require("./leaveRequest.model")(
-    sequelize,
-    DataTypes
-);
+//  OTHER MODELS
+db.Opening = require("./opening.model")( sequelize, DataTypes );
+db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes );
+db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes );
+db.Employee = require("./employee.model")( sequelize, DataTypes );
+db.Payroll = require("./payroll.model")( sequelize, DataTypes );
+db.LeaveCategory = require("./leaveCategory.model")( sequelize, DataTypes );
+db.LeaveRequest = require("./leaveRequest.model")( sequelize, DataTypes );
 
 
-/*
-|--------------------------------------------------------------------------
-| USER / AUTH RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+//  USER / AUTH RELATIONSHIPS
 
 // User -> Password Reset Tokens
 db.User.hasMany(db.PasswordResetToken, {
@@ -355,11 +171,7 @@ db.Permission.belongsTo(db.Module, {
 });
 
 
-/*
-|--------------------------------------------------------------------------
-| LEAD RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+//  LEAD RELATIONSHIPS
 
 // Lead -> Lead Source
 db.Lead.belongsTo(db.LeadSource, {
@@ -412,11 +224,7 @@ db.LeadHistory.belongsTo(db.User, {
 });
 
 
-/*
-|--------------------------------------------------------------------------
-| SERVICE RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+//  SERVICE RELATIONSHIPS
 
 // Service Category -> Services
 db.ServiceCategory.hasMany(db.Service, {
@@ -445,12 +253,7 @@ db.Service.belongsToMany(db.Lead, {
 });
 
     
-/*
-|--------------------------------------------------------------------------
-| PROJECT RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
-
+// | PRJECT RELATIONSHIPS
 // Project Onboard -> Lead
 db.ProjectOnboard.belongsTo(db.Lead, {
     foreignKey: "leadId",
@@ -508,11 +311,7 @@ db.ProjectAssignment.belongsTo(db.User, {
 });
 
 
-/*
-|--------------------------------------------------------------------------
-| EMPLOYEE RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+//  EMPLOYEE RELATIONSHIPS
 
 db.Employee.belongsTo(db.User, {
     foreignKey: "createdBy",
@@ -587,11 +386,7 @@ db.Department.hasMany(db.Opening, {
     as: "openings",
 });
 
-/*
-|--------------------------------------------------------------------------
-| CIF RELATIONSHIPS
-|--------------------------------------------------------------------------
-*/
+//  CIF RELATIONSHIPS
 
 // Candidate -> Academic
 db.Candidate.hasMany(db.CandidateAcademic, {
@@ -763,13 +558,7 @@ db.Recruitment.belongsTo(db.Candidate, {
     as: "candidate",
 });
 
-
-
-/*
-|--------------------------------------------------------------------------
-| SEQUELIZE
-|--------------------------------------------------------------------------
-*/
+//  SEQUELIZE
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

@@ -14,6 +14,7 @@ router.use("/departments", require("./department.routes"));
 router.use("/service-categories", require("./serviceCategory.routes"));
 
 router.use("/lead",require("./lead.routes"));
+router.use("/vendor", require("./vendor.routes"));
 
 router.use("/openings", require ("./opening.routes"));
 router.use("/cif-personals", require("./cifPersonal.routes"));
@@ -34,7 +35,5 @@ router.use("/onboardings", require("./onboarding.routes"));
 router.use("/leaves", require("./leave.routes"));
 router.use("/payrolls", require("./payroll.routes"));
 
-router.use("/ventor", require("./ventor.routes"));
-router.use("/ventorservices", require("./ventorService.routes"));
 
 module.exports = router; 

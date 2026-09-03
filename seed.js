@@ -204,16 +204,16 @@ async function seedLeadServices() {
 
         const [record, created] = await db.LeadService.findOrCreate({
             where: {
-                leadId: item.leadId,
-                serviceId: item.serviceId,
+                 leadId: leadExists.id,
+                serviceId: serviceExists.id,
             },
             defaults: {
-                leadId: item.leadId,
-                serviceId: item.serviceId,
+                leadId: leadExists.id,
+                serviceId: serviceExists.id,
             },
         });
 
-        logger.info(`[seed] lead_services ${created ? "created" : "exists"}: leadId=${item.leadId}, serviceId=${item.serviceId}`);
+        logger.info(`[seed] lead_services ${created ? "created" : "exists"}: leadId=${leadExists.id}, serviceId=${serviceExists.id}`);
         if (record) {
             // no-op for existing rows
         }
