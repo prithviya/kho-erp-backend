@@ -53,6 +53,11 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: "active",
             },
+
+            services: {
+                type: DataTypes.JSON,
+                allowNull: true,
+            },
         },
         {
             tableName: "vendors",
