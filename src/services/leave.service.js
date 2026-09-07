@@ -83,7 +83,51 @@ class LeaveService {
     }
 
     async ensureBalanceAvailable({ category, userId, fromDate, requestedDays, requestedHours, excludeRequestId = null }) {
+        if (category.code === "LEAVE_WITHOUT_PAY") {
+            return;
+        }
+
         const year = Number(String(fromDate).slice(0, 4)) || new Date().getFullYear();
+        let allocated = toNumber(category.allocatedValue);
+
+        if (category.code === "CASUAL_LEAVE") {
+            const currentYear = new Date().getFullYear();
+            if (year === currentYear) {
+                allocated = new Date().getMonth() + 1; // 1 per month
+            } else if (year < currentYear) {
+                allocated = 12;
+            } else {
+                allocated = 0;
+            }
+        } else if (category.code === "PERMISSION") {
+            const fromDateObj = new Date(fromDate);
+            const month = fromDateObj.getMonth();
+            const fromMonthDate = new Date(year, month, 1).toISOString().slice(0, 10);
+            // using last day of month
+            const toMonthDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+            
+            const where = {
+                userId,
+                categoryId: category.id,
+                fromDate: { [Op.between]: [fromMonthDate, toMonthDate] },
+                status: { [Op.in]: ["PENDING", "APPROVED"] },
+            };
+            if (excludeRequestId) {
+                where.id = { [Op.ne]: excludeRequestId };
+            }
+            
+            const monthRequests = await db.LeaveRequest.findAll({ where });
+            const monthBookedHours = monthRequests.reduce((acc, req) => acc + toNumber(req.requestedHours), 0);
+            const incoming = toNumber(requestedHours);
+            
+            if (monthBookedHours + incoming > 2) {
+                const error = new Error(`Permission exceeds 2 hours per month. Available ${Number((2 - monthBookedHours).toFixed(2))} hours.`);
+                error.status = 400;
+                throw error;
+            }
+            return;
+        }
+
         const stats = await this.getCategoryBookingStats({
             userId,
             categoryId: category.id,
@@ -91,7 +135,6 @@ class LeaveService {
             excludeRequestId,
         });
 
-        const allocated = toNumber(category.allocatedValue);
         const alreadyBooked = category.unit === "HOUR" ? stats.hours : stats.days;
         const incoming = category.unit === "HOUR" ? toNumber(requestedHours) : toNumber(requestedDays);
         const remaining = Number((allocated - alreadyBooked).toFixed(2));
@@ -290,6 +333,65 @@ class LeaveService {
         };
     }
 
+    async applyLeaveRules(category, userId, calculated, excludeRequestId = null) {
+        let finalCategory = category;
+        let adjustedCalculated = { ...calculated };
+
+        if (finalCategory.code === "PERMISSION") {
+            const year = Number(String(adjustedCalculated.fromDate).slice(0, 4));
+            const month = new Date(adjustedCalculated.fromDate).getMonth();
+            const fromMonthDate = new Date(year, month, 1).toISOString().slice(0, 10);
+            const toMonthDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+            
+            const where = {
+                userId,
+                categoryId: finalCategory.id,
+                fromDate: { [Op.between]: [fromMonthDate, toMonthDate] },
+                status: { [Op.in]: ["PENDING", "APPROVED"] },
+            };
+            if (excludeRequestId) {
+                where.id = { [Op.ne]: excludeRequestId };
+            }
+            const monthRequests = await db.LeaveRequest.findAll({ where });
+            const monthBookedHours = monthRequests.reduce((acc, req) => acc + toNumber(req.requestedHours), 0);
+            
+            if (monthBookedHours + adjustedCalculated.requestedHours > 2) {
+                const clCategory = await db.LeaveCategory.findOne({ where: { code: "CASUAL_LEAVE" } });
+                if (clCategory) {
+                    finalCategory = clCategory;
+                    adjustedCalculated.durationType = "HALF_DAY";
+                    adjustedCalculated.requestedDays = 0.5;
+                    adjustedCalculated.requestedHours = 0;
+                }
+            }
+        }
+
+        if (finalCategory.code === "CASUAL_LEAVE") {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const fromDateObj = new Date(adjustedCalculated.fromDate);
+            const diffInDays = Math.floor((fromDateObj - today) / (1000 * 60 * 60 * 24));
+            
+            if (diffInDays < 2) {
+                const lopCategory = await db.LeaveCategory.findOne({ where: { code: "LEAVE_WITHOUT_PAY" } });
+                if (lopCategory) {
+                    finalCategory = lopCategory;
+                }
+            }
+        }
+
+        await this.ensureBalanceAvailable({
+            category: finalCategory,
+            userId,
+            fromDate: adjustedCalculated.fromDate,
+            requestedDays: adjustedCalculated.requestedDays,
+            requestedHours: adjustedCalculated.requestedHours,
+            excludeRequestId
+        });
+
+        return { finalCategory, adjustedCalculated };
+    }
+
     async createRequest(payload = {}, actor = {}) {
         const categoryId = Number(payload.categoryId);
         if (!categoryId) {
@@ -316,28 +418,26 @@ class LeaveService {
 
         const calculated = await this.computeAmount(category, payload);
 
-        await this.ensureBalanceAvailable({
+        const { finalCategory, adjustedCalculated } = await this.applyLeaveRules(
             category,
-            userId: requesterId,
-            fromDate: calculated.fromDate,
-            requestedDays: calculated.requestedDays,
-            requestedHours: calculated.requestedHours,
-        });
+            requesterId,
+            calculated
+        );
 
         return db.LeaveRequest.create({
             userId: requesterId,
             employeeCode: requester.employeeRecord || null,
             employeeName: `${requester.firstName || ""} ${requester.lastName || ""}`.trim() || requester.email,
-            categoryId,
-            fromDate: calculated.fromDate,
-            toDate: calculated.toDate,
-            durationType: calculated.durationType,
+            categoryId: finalCategory.id,
+            fromDate: adjustedCalculated.fromDate,
+            toDate: adjustedCalculated.toDate,
+            durationType: adjustedCalculated.durationType,
             session: payload.session ? String(payload.session).toUpperCase() : null,
             quarterSlot: payload.quarterSlot ? Number(payload.quarterSlot) : null,
             startTime: payload.startTime || null,
             endTime: payload.endTime || null,
-            requestedDays: calculated.requestedDays,
-            requestedHours: calculated.requestedHours,
+            requestedDays: adjustedCalculated.requestedDays,
+            requestedHours: adjustedCalculated.requestedHours,
             reason: payload.reason || null,
             status: "PENDING",
         });
@@ -384,20 +484,18 @@ class LeaveService {
             requestedHours: payload.requestedHours,
         });
 
-        await this.ensureBalanceAvailable({
+        const { finalCategory, adjustedCalculated } = await this.applyLeaveRules(
             category,
-            userId: request.userId,
-            fromDate: calculated.fromDate,
-            requestedDays: calculated.requestedDays,
-            requestedHours: calculated.requestedHours,
-            excludeRequestId: request.id,
-        });
+            request.userId,
+            calculated,
+            request.id
+        );
 
         await request.update({
-            categoryId,
-            fromDate: calculated.fromDate,
-            toDate: calculated.toDate,
-            durationType: calculated.durationType,
+            categoryId: finalCategory.id,
+            fromDate: adjustedCalculated.fromDate,
+            toDate: adjustedCalculated.toDate,
+            durationType: adjustedCalculated.durationType,
             session: payload.session ? String(payload.session).toUpperCase() : request.session,
             quarterSlot:
                 payload.quarterSlot !== undefined
@@ -405,8 +503,8 @@ class LeaveService {
                     : request.quarterSlot,
             startTime: payload.startTime !== undefined ? payload.startTime : request.startTime,
             endTime: payload.endTime !== undefined ? payload.endTime : request.endTime,
-            requestedDays: calculated.requestedDays,
-            requestedHours: calculated.requestedHours,
+            requestedDays: adjustedCalculated.requestedDays,
+            requestedHours: adjustedCalculated.requestedHours,
             reason: payload.reason !== undefined ? payload.reason : request.reason,
         });
 
@@ -503,16 +601,33 @@ class LeaveService {
 
         const byCategory = new Map();
         categories.forEach((category) => {
+            let allocated = toNumber(category.allocatedValue);
+            
+            if (category.code === "CASUAL_LEAVE") {
+                const currentYear = new Date().getFullYear();
+                if (year === currentYear) {
+                    allocated = new Date().getMonth() + 1;
+                } else if (year < currentYear) {
+                    allocated = 12;
+                } else {
+                    allocated = 0;
+                }
+            } else if (category.code === "PERMISSION") {
+                allocated = 24; // 2 hours per month * 12
+            } else if (category.code === "LEAVE_WITHOUT_PAY") {
+                allocated = 0; // or Infinity, but let's keep 0 as no limit
+            }
+
             byCategory.set(category.id, {
                 categoryId: category.id,
                 code: category.code,
                 name: category.name,
                 unit: category.unit,
-                allocated: toNumber(category.allocatedValue),
+                allocated,
                 booked: 0,
                 taken: 0,
                 pending: 0,
-                available: toNumber(category.allocatedValue),
+                available: allocated,
             });
         });
 

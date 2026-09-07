@@ -29,6 +29,11 @@ const ROLE_SEEDS = [
         name: "Team Member",
         description: "General team member role",
     },
+    {
+        code: "CEO",
+        name: "CEO",
+        description: "Leads company strategy, growth, and operations.",
+    },
 ];
 
 const DEPARTMENT_SEEDS = [
