@@ -54,13 +54,14 @@ const LEAD_SOURCE_SEEDS = [
 ];
 
 const LEAD_STATUS_SEEDS = [
-    { name: "On Hold", code: "ON_HOLD", color: "#9e9e9e", description: "Lead is temporarily on hold and will be revisited later.", isDefault: false, isClosed: false, displayOrder: 7 },
+   
     { name: "New", code: "NEW", color: "#2563EB", description: "A new lead awaiting initial contact.", isDefault: true, isClosed: false, displayOrder: 1 },
     { name: "Contacted", code: "CONTACTED", color: "#eb9824", description: "Initial contact has been made with the lead.", isDefault: false, isClosed: false, displayOrder: 2 },
     { name: "Discussion", code: "DISCUSSION", color: "#eb248e", description: "", isDefault: false, isClosed: false, displayOrder: 3 },
     { name: "Proposal", code: "PROPOSAL", color: "#9124eb", description: "A quotation or proposal has been shared with the lead.", isDefault: false, isClosed: false, displayOrder: 4 },
     { name: "Negotiation", code: "NEGOTIATION", color: "#eb5524", description: "", isDefault: false, isClosed: false, displayOrder: 5 },
     { name: "Converted", code: "CONVERTED", color: "#24eb94", description: "", isDefault: false, isClosed: true, displayOrder: 6 },
+    { name: "On Hold", code: "ON_HOLD", color: "#9e9e9e", description: "Lead is temporarily on hold and will be revisited later.", isDefault: false, isClosed: false, displayOrder: 7 },
 ];
 
 const LEAVE_CATEGORY_SEEDS = [

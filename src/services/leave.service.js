@@ -37,6 +37,13 @@ function toIsoDate(value) {
     return date.toISOString().slice(0, 10);
 }
 
+function getTodayIsoDate() {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${today.getFullYear()}-${month}-${day}`;
+}
+
 function inclusiveDiffDays(fromDate, toDate) {
     const from = new Date(fromDate);
     const to = new Date(toDate);
@@ -58,12 +65,12 @@ function getYearRange(year) {
 }
 
 class LeaveService {
-    async getCategoryBookingStats({ userId, categoryId, year, excludeRequestId = null }) {
+    async getCategoryBookingStats({ userId, categoryId, year, throughDate = null, excludeRequestId = null }) {
         const [fromYearDate, toYearDate] = getYearRange(year);
         const where = {
             userId,
             categoryId,
-            fromDate: { [Op.between]: [fromYearDate, toYearDate] },
+            fromDate: { [Op.between]: [fromYearDate, throughDate || toYearDate] },
             status: { [Op.in]: ["PENDING", "APPROVED"] },
         };
 
@@ -91,11 +98,12 @@ class LeaveService {
         let allocated = toNumber(category.allocatedValue);
 
         if (category.code === "CASUAL_LEAVE") {
+            const month = Number(String(fromDate).slice(5, 7));
             const currentYear = new Date().getFullYear();
-            if (year === currentYear) {
-                allocated = new Date().getMonth() + 1; // 1 per month
-            } else if (year < currentYear) {
+            if (year < currentYear) {
                 allocated = 12;
+            } else if (year === currentYear) {
+                allocated = Math.max(0, 12 - new Date().getMonth());
             } else {
                 allocated = 0;
             }
@@ -132,6 +140,10 @@ class LeaveService {
             userId,
             categoryId: category.id,
             year,
+            throughDate:
+                category.code === "CASUAL_LEAVE"
+                    ? `${year}-${String(Number(String(fromDate).slice(5, 7))).padStart(2, "0")}-${new Date(year, Number(String(fromDate).slice(5, 7)), 0).getDate()}`
+                    : null,
             excludeRequestId,
         });
 
@@ -367,9 +379,8 @@ class LeaveService {
         }
 
         if (finalCategory.code === "CASUAL_LEAVE") {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const fromDateObj = new Date(adjustedCalculated.fromDate);
+            const today = new Date(`${getTodayIsoDate()}T00:00:00`);
+            const fromDateObj = new Date(`${adjustedCalculated.fromDate}T00:00:00`);
             const diffInDays = Math.floor((fromDateObj - today) / (1000 * 60 * 60 * 24));
             
             if (diffInDays < 2) {
@@ -606,14 +617,21 @@ class LeaveService {
             if (category.code === "CASUAL_LEAVE") {
                 const currentYear = new Date().getFullYear();
                 if (year === currentYear) {
-                    allocated = new Date().getMonth() + 1;
+                    allocated = Math.max(0, 12 - new Date().getMonth());
                 } else if (year < currentYear) {
                     allocated = 12;
                 } else {
                     allocated = 0;
                 }
             } else if (category.code === "PERMISSION") {
-                allocated = 24; // 2 hours per month * 12
+                const currentYear = new Date().getFullYear();
+                if (year < currentYear) {
+                    allocated = 24;
+                } else if (year === currentYear) {
+                    allocated = Math.max(0, 12 - new Date().getMonth()) * 2;
+                } else {
+                    allocated = 0;
+                }
             } else if (category.code === "LEAVE_WITHOUT_PAY") {
                 allocated = 0; // or Infinity, but let's keep 0 as no limit
             }
