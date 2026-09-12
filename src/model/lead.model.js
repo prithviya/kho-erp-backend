@@ -11,9 +11,17 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(150),
                 allowNull: false
             },
+            salutation: {
+                type: DataTypes.STRING(10),
+                allowNull: true
+            },
             contactPerson: {
                 type: DataTypes.STRING(100),
                 allowNull: false
+            },
+            phoneCountryCode: {
+                type: DataTypes.STRING(8),
+                allowNull: true
             },
             phone: {
                 type: DataTypes.STRING(20),

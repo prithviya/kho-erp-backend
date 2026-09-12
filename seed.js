@@ -42,7 +42,7 @@ const DEPARTMENT_SEEDS = [
     { name: "Digital Marketing" },
     { name: "Web development" },
     { name: "Media" },
-    { name: "Designs" },
+    { name: "Design" },
 ];
 
 const LEAD_SOURCE_SEEDS = [
@@ -74,16 +74,22 @@ const LEAVE_CATEGORY_SEEDS = [
 const SERVICE_CATEGORY_SEEDS = [
     { name: "DM", code: "DM", color: "#2563EB", displayOrder: 1 },
     { name: "Operations", code: "OP", color: "#eb24e4", displayOrder: 3 },
-    { name: "Web Development", code: "WEB", color: "#24e7eb", displayOrder: 4 },
-    { name: "Content", code: "CONTENT", color: "#e9944e", displayOrder: 5 },
-    { name: "Designer", code: "DESIGNER", color: "#eb4224", displayOrder: 6 },
+    { name: "Web Development", code: "WEB", color: "#12baa6", displayOrder: 4 },
+    { name: "Content", code: "CON", color: "#e9944e", displayOrder: 5 },
+    { name: "Design", code: "DESIGN", color: "#eb4224", displayOrder: 6 },
 ];
 
 const SERVICE_SEEDS = [
     { name: "Website", code: "SITE", serviceCategoryCode: "DM", displayOrder: 1 },
     { name: "SEO", code: "SEO", serviceCategoryCode: "DM", displayOrder: 2 },
     { name: "SMM", code: "SMM", serviceCategoryCode: "DM", displayOrder: 3 },
-    { name: "Graphics Designer", code: "GD", serviceCategoryCode: "DESIGNER", displayOrder: 1 },
+    { name: "SEM", code: "SEM", serviceCategoryCode: "DM", displayOrder: 4 },
+    { name: "Content Marketing", code: "CM", serviceCategoryCode: "CON", displayOrder: 1 },
+    { name: "Graphics Design", code: "GD", serviceCategoryCode: "DESIGN", displayOrder: 1 },+
+    { name: "UI/UX Design",             code: "UX",  serviceCategoryCode: "DESIGN", displayOrder: 5 },
+    { name: "Web & Mobile Apps",code: "WMA", serviceCategoryCode: "WEB", displayOrder: 5 },
+    { name: "CRM & Automation",         code: "CRMA",serviceCategoryCode: "WEB", displayOrder: 6 },
+
 ];
 
 const LEAD_SERVICE_SEEDS = [

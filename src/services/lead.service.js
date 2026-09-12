@@ -1,5 +1,19 @@
 const { sequelize, Lead, LeadHistory } = require("../model");
 const leadRepository = require("../repository/lead.repository");
+
+function normalizePhone(phone, phoneCountryCode) {
+    const phoneDigits = String(phone || "").replace(/\D/g, "");
+    const countryCodeDigits = String(phoneCountryCode || "").replace(/\D/g, "");
+    const nationalDigits = countryCodeDigits && phoneDigits.startsWith(countryCodeDigits)
+        ? phoneDigits.slice(countryCodeDigits.length)
+        : phoneDigits;
+
+    return {
+        phone: nationalDigits,
+        phoneCountryCode: countryCodeDigits ? `+${countryCodeDigits}` : null,
+    };
+}
+
 class LeadService {
     async getAll(filters = {}) {
         return await leadRepository.getAll(filters);
@@ -25,11 +39,14 @@ class LeadService {
     async createLead(data, userId) {
         const transaction = await sequelize.transaction();
         try {
+            const phone = normalizePhone(data.phone, data.phoneCountryCode);
             // Create Lead
             const lead = await Lead.create({
                 companyName: data.companyName,
+                salutation: data.salutation,
                 contactPerson: data.contactPerson,
-                phone: data.phone,
+                phone: phone.phone,
+                phoneCountryCode: phone.phoneCountryCode,
                 email: data.email,
                 requirement: data.requirement,
                 budget: data.budget,
@@ -50,7 +67,8 @@ class LeadService {
             await LeadHistory.create({
                 leadId: lead.id,
                 oldStatusId: null,
-                newStatusId: data.leadStatusId,
+                newStatusId: data.leadStatusId || 1,
+                newFollowupDate: data.nextFollowupDate || null,
                 notes: "Lead Created",
                 changedBy: userId
             }, { transaction });
@@ -68,6 +86,19 @@ class LeadService {
             const lead = await Lead.findByPk(id, { transaction });
             if (!lead) throw new Error("Lead not found.");
 
+            const phone = data.phone !== undefined
+                ? normalizePhone(data.phone, data.phoneCountryCode)
+                : null;
+            const oldStatusId = lead.leadStatusId;
+            const nextStatusId = data.leadStatusId ?? oldStatusId;
+            const oldFollowupDate = lead.nextFollowupDate ? String(lead.nextFollowupDate) : "";
+            const nextFollowupDate = data.nextFollowupDate !== undefined
+                ? (data.nextFollowupDate ? String(data.nextFollowupDate) : "")
+                : oldFollowupDate;
+            const statusChanged = Number(oldStatusId) !== Number(nextStatusId);
+            const followupChanged = oldFollowupDate !== nextFollowupDate;
+            const changeReason = String(data.changeReason || "").trim();
+
             if (access.requireAssignedUser) {
                 this.assertLeadOwnership(lead, access.userId);
             }
@@ -75,8 +106,9 @@ class LeadService {
             // Update Lead
             await lead.update({
                 companyName: data.companyName,
+                salutation: data.salutation,
                 contactPerson: data.contactPerson,
-                phone: data.phone,
+                ...(phone || {}),
                 email: data.email,
                 requirement: data.requirement,
                 budget: data.budget,
@@ -96,13 +128,21 @@ class LeadService {
             }
 
             // Lead History
-            await LeadHistory.create({
-                leadId: lead.id,
-                oldStatusId: lead._previousDataValues.leadStatusId,
-                newStatusId: data.leadStatusId,
-                notes: "Lead Updated",
-                changedBy: userId
-            }, { transaction });
+            if (statusChanged || followupChanged || changeReason) {
+                await LeadHistory.create({
+                    leadId: lead.id,
+                    oldStatusId,
+                    newStatusId: nextStatusId,
+                    oldFollowupDate: followupChanged ? (oldFollowupDate || null) : null,
+                    newFollowupDate: followupChanged ? (nextFollowupDate || null) : null,
+                    notes: changeReason || (statusChanged
+                        ? "Lead status changed"
+                        : followupChanged
+                            ? "Next follow-up date changed"
+                            : "Lead details updated"),
+                    changedBy: userId
+                }, { transaction });
+            }
 
             await transaction.commit();
             return await leadRepository.getById(lead.id);

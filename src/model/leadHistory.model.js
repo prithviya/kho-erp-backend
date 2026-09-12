@@ -17,6 +17,12 @@ module.exports = (sequelize, DataTypes) => {
             newStatusId: {
                 type: DataTypes.INTEGER
             },
+            oldFollowupDate: {
+                type: DataTypes.DATEONLY
+            },
+            newFollowupDate: {
+                type: DataTypes.DATEONLY
+            },
             notes: {
                 type: DataTypes.TEXT
             },

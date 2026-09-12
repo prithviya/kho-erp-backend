@@ -1,17 +1,39 @@
 const { body } = require("express-validator");
 
+function validatePhoneDigits(value, { req }) {
+    const phoneDigits = String(value || "").replace(/\D/g, "");
+    const countryCodeDigits = String(req.body.phoneCountryCode || "").replace(/\D/g, "");
+    const nationalDigits = countryCodeDigits && phoneDigits.startsWith(countryCodeDigits)
+        ? phoneDigits.slice(countryCodeDigits.length)
+        : phoneDigits;
+
+    if (nationalDigits.length !== 10) {
+        throw new Error("Phone number must contain exactly 10 digits.");
+    }
+
+    return true;
+}
+
 exports.createLeadValidation = [
     body("companyName")
         .notEmpty().withMessage("Company name is required.")
         .isLength({ max: 255 }).withMessage("Company name must not exceed 255 characters."),
 
+    body("salutation")
+        .notEmpty().withMessage("Salutation is required.")
+        .isIn(["Mr.", "Mrs.", "Miss"]).withMessage("Invalid salutation."),
+
     body("contactPerson")
         .notEmpty().withMessage("Contact person is required.")
         .isLength({ max: 255 }).withMessage("Contact person must not exceed 255 characters."),
 
+    body("phoneCountryCode")
+        .notEmpty().withMessage("Country code is required.")
+        .matches(/^\+\d{1,4}$/).withMessage("Invalid country code."),
+
     body("phone")
         .notEmpty().withMessage("Phone number is required.")
-        .matches(/^\d{10}$/).withMessage("Phone number must contain exactly 10 digits."),
+        .custom(validatePhoneDigits),
 
     body("email")
         .notEmpty().withMessage("Email is required.")
@@ -51,13 +73,22 @@ exports.updateLeadValidation = [
         .optional()
         .isLength({ max: 255 }).withMessage("Company name must not exceed 255 characters."),
 
+    body("salutation")
+        .optional()
+        .isIn(["Mr.", "Mrs.", "Miss"]).withMessage("Invalid salutation."),
+
     body("contactPerson")
         .optional()
         .isLength({ max: 255 }).withMessage("Contact person must not exceed 255 characters."),
 
+    body("phoneCountryCode")
+        .if((value, { req }) => req.body.phone !== undefined)
+        .notEmpty().withMessage("Country code is required.")
+        .matches(/^\+\d{1,4}$/).withMessage("Invalid country code."),
+
     body("phone")
         .optional()
-        .matches(/^\d{10}$/).withMessage("Phone number must contain exactly 10 digits."),
+        .custom(validatePhoneDigits),
 
     body("email")
         .optional()
