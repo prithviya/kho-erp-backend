@@ -85,10 +85,10 @@ const SERVICE_SEEDS = [
     { name: "SMM", code: "SMM", serviceCategoryCode: "DM", displayOrder: 3 },
     { name: "SEM", code: "SEM", serviceCategoryCode: "DM", displayOrder: 4 },
     { name: "Content Marketing", code: "CM", serviceCategoryCode: "CON", displayOrder: 1 },
-    { name: "Graphics Design", code: "GD", serviceCategoryCode: "DESIGN", displayOrder: 1 },+
-    { name: "UI/UX Design",             code: "UX",  serviceCategoryCode: "DESIGN", displayOrder: 5 },
+    { name: "Graphics Design", code: "GD", serviceCategoryCode: "DESIGN", displayOrder: 1 },
+    { name: "UI/UX Design", code: "UX",  serviceCategoryCode: "DESIGN", displayOrder: 5 },
     { name: "Web & Mobile Apps",code: "WMA", serviceCategoryCode: "WEB", displayOrder: 5 },
-    { name: "CRM & Automation",         code: "CRMA",serviceCategoryCode: "WEB", displayOrder: 6 },
+    { name: "CRM & Automation", code: "CRMA",serviceCategoryCode: "WEB", displayOrder: 6 },
 
 ];
 
