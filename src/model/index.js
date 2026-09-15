@@ -53,7 +53,7 @@ db.LeadService = require("./leadService.model")( sequelize, DataTypes );
 db.LeadHistory = require("./leadHistory.model")( sequelize, DataTypes );
 
 //  SERVICE MODELS
-db.ServiceCategory = require("./serviceCategory.model")( sequelize, DataTypes );
+db.ServiceCategory = require("./servicecategory.model")( sequelize, DataTypes );
 db.Service = require("./service.model")( sequelize, DataTypes );
 
 //  MASTER
