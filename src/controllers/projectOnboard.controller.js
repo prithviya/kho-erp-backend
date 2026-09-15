@@ -29,6 +29,11 @@ exports.getProjectOnboardById = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, "Project fetched successfully.", project);
 });
 
+exports.deleteProjectOnboard = asyncHandler(async (req, res) => {
+    await projectOnboardService.deleteProjectOnboard(req.params.id);
+    return ApiResponse.success(res, "Project deleted successfully.");
+});
+
 exports.updateProjectOnboard = asyncHandler(async (req, res) => {
     const { projectName, companyName, serviceIds } = req.body;
 

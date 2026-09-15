@@ -19,11 +19,6 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: true
             },
-            status: {
-                type: DataTypes.STRING(50),
-                allowNull: false,
-                defaultValue: "In Progress"
-            },
             assignedBy: {
                 type: DataTypes.INTEGER,
                 allowNull: true

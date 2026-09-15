@@ -4,7 +4,7 @@ const multer = require("multer");
 const router = require("express").Router();
 const controller = require("../controllers/employee.controller");
 const authMiddleware = require("../middleware/auth.middleware");
-const { requireAnyRole } = require("../middleware/roleAccess.middleware");
+const { requireAnyRole, requireDeleteAccess } = require("../middleware/roleAccess.middleware");
 
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
 if (!fs.existsSync(uploadDir)) {
@@ -29,9 +29,10 @@ const upload = multer({
     }
 });
 
-router.get("/", authMiddleware, requireAnyRole(["hr"]), controller.getEmployees);
+router.get("/", authMiddleware, requireAnyRole(["hr", "manager"]), controller.getEmployees);
 router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getEmployeeById);
 router.post("/", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.createEmployee);
 router.put("/:id", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.updateEmployee);
+router.delete("/:id", authMiddleware, requireAnyRole(["super_admin"]), requireDeleteAccess, controller.deleteEmployee);
 
 module.exports = router;

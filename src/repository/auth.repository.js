@@ -1,8 +1,12 @@
 const { User, Role, Permission, RefreshToken, Module } = require("../model");
+const { Op } = require("sequelize");
 class AuthRepository {
-    async login(email) {
+    async login(identifier) {
         return await User.findOne({
-            where: { email },
+            where: {
+                [Op.or]: [{ email: identifier }, { username: identifier }]
+            },
+            paranoid: false,
             include: [
                 {
                     model: Role,

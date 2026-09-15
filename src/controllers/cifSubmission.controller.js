@@ -510,3 +510,16 @@ async function getCompleteSubmission(cifid) {
     ]
   });
 }
+
+exports.deleteSubmission = asyncHandler(async (req, res) => {
+  const { cifid } = req.params;
+  const submission = await cifPersonal.findByPk(cifid);
+
+  if (!submission) {
+    return ApiResponse.notFound(res, "Application not found.");
+  }
+
+  await submission.destroy();
+
+  return ApiResponse.success(res, "Application deleted successfully.", { cifid });
+});

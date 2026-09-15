@@ -27,10 +27,8 @@ exports.registerValidation = [
 exports.loginValidation = [
     body("email")
         .notEmpty()
-        .withMessage("Email is required.")
-        .isEmail()
-        .withMessage("Invalid email.")
-        .normalizeEmail(),
+        .withMessage("Email or username is required.")
+        .trim(),
     body("password")
         .notEmpty()
         .withMessage("Password is required."),

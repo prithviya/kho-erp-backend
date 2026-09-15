@@ -24,6 +24,11 @@ const getUsers = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, "Users fetched successfully.", users);
 });
 
+const getDirectory = asyncHandler(async (_req, res) => {
+  const users = await service.getDirectory();
+  return ApiResponse.success(res, "Users fetched successfully.", users);
+});
+
 const updateUser = asyncHandler(async (req, res) => {
   const { error } = updateUserValidation.validate(req.body);
   if (error) {
@@ -55,6 +60,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 module.exports = {
   createUser,
   getUsers,
+  getDirectory,
   updateUser,
   updateUserStatus,
   deleteUser

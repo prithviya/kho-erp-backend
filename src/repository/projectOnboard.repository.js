@@ -18,7 +18,6 @@ class ProjectOnboardRepository extends BaseRepository {
                         "projectOnboardId",
                         "assignedToId",
                         "reportingHeadId",
-                        "status",
                         "assignedBy",
                         "assignedAt",
                         "createdAt"
@@ -41,7 +40,6 @@ class ProjectOnboardRepository extends BaseRepository {
                         "projectOnboardId",
                         "assignedToId",
                         "reportingHeadId",
-                        "status",
                         "assignedBy",
                         "assignedAt",
                         "createdAt"

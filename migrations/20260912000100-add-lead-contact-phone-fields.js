@@ -2,15 +2,21 @@
 
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.addColumn("leads", "salutation", {
-            type: Sequelize.STRING(10),
-            allowNull: true,
-        });
+        const columns = await queryInterface.describeTable("leads");
 
-        await queryInterface.addColumn("leads", "phoneCountryCode", {
-            type: Sequelize.STRING(8),
-            allowNull: true,
-        });
+        if (!columns.salutation) {
+            await queryInterface.addColumn("leads", "salutation", {
+                type: Sequelize.STRING(10),
+                allowNull: true,
+            });
+        }
+
+        if (!columns.phoneCountryCode) {
+            await queryInterface.addColumn("leads", "phoneCountryCode", {
+                type: Sequelize.STRING(8),
+                allowNull: true,
+            });
+        }
     },
 
     async down(queryInterface) {

@@ -6,7 +6,8 @@ const {
     User,
     Service,
     ServiceCategory,
-    LeadHistory
+    LeadHistory,
+    ProjectOnboard
 } = require("../model");
 class LeadRepository extends BaseRepository {
     constructor() {
@@ -45,6 +46,12 @@ class LeadRepository extends BaseRepository {
                         "lastName",
                         "email"
                     ]
+                },
+                {
+                    model: ProjectOnboard,
+                    as: "projects",
+                    required: false,
+                    attributes: ["id", "projectName", "createdAt"]
                 },
                 {
                     model: Service,
@@ -94,6 +101,12 @@ class LeadRepository extends BaseRepository {
                             as: "category"
                         }
                     ]
+                },
+                {
+                    model: ProjectOnboard,
+                    as: "projects",
+                    required: false,
+                    attributes: ["id", "projectName", "createdAt"]
                 },
                 {
                     model: LeadHistory,

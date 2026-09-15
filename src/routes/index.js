@@ -27,6 +27,7 @@ router.use("/cif-software",require("./cifSoftware.routes"));
 router.use("/cif-submissions", require("./cifSubmission.routes"));
 
 router.use("/project-onboards", require("./projectOnboard.routes"));
+router.use("/tasks", require("./task.routes"));
 router.use("/dashboard", require("./dashboard.routes"));
 router.use("/employees", require("./employee.routes"));
 router.use("/recruitments", require("./recruitment.routes"));

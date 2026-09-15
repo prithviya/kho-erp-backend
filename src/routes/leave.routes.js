@@ -3,7 +3,7 @@ const router = express.Router();
 
 const controller = require("../controllers/leave.controller");
 const authMiddleware = require("../middleware/auth.middleware");
-const { requireAnyRole } = require("../middleware/roleAccess.middleware");
+const { requireAnyRole, requireDeleteAccess } = require("../middleware/roleAccess.middleware");
 const validate = require("../middleware/validate.middleware");
 const {
 	createLeaveRequestValidation,
@@ -29,6 +29,6 @@ router.patch(
 	validate,
 	controller.updateRequestStatus
 );
-router.delete("/requests/:id", authMiddleware, controller.deleteRequest);
+router.delete("/requests/:id", authMiddleware, requireAnyRole(["super_admin"]), requireDeleteAccess, controller.deleteRequest);
 
 module.exports = router;

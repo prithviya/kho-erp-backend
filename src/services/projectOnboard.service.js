@@ -1,4 +1,4 @@
-const { Lead, sequelize } = require("../model");
+const { Lead, ProjectOnboard, sequelize } = require("../model");
 const projectAssignmentRepository = require("../repository/projectAssignment.repository");
 const projectOnboardRepository = require("../repository/projectOnboard.repository");
 
@@ -18,8 +18,7 @@ class ProjectOnboardService {
             return {
                 ...plainProject,
                 assignedToIds: [],
-                reportingHeadId: null,
-                status: plainProject?.status || "Pending"
+                reportingHeadId: null
             };
         }
 
@@ -39,8 +38,7 @@ class ProjectOnboardService {
         return {
             ...plainProject,
             assignedToIds,
-            reportingHeadId: latest?.reportingHeadId ? Number(latest.reportingHeadId) : null,
-            status: latest?.status || plainProject?.status || "Pending"
+            reportingHeadId: latest?.reportingHeadId ? Number(latest.reportingHeadId) : null
         };
     }
 
@@ -48,6 +46,19 @@ class ProjectOnboardService {
         if (data.leadId) {
             const lead = await Lead.findByPk(data.leadId, { paranoid: false });
             if (!lead) throw new Error("Lead not found.");
+
+            // One project per lead: block a second onboarding from the same lead.
+            const existingProject = await ProjectOnboard.findOne({
+                where: { leadId: data.leadId },
+                attributes: ["id", "projectName"]
+            });
+            if (existingProject) {
+                const error = new Error(
+                    "This lead is already onboarded with a project. If needed, create a new lead."
+                );
+                error.status = 409;
+                throw error;
+            }
         }
 
         return await projectOnboardRepository.create({
@@ -58,7 +69,6 @@ class ProjectOnboardService {
             spocIds: this.normalizeIdArray(data.spocIds),
             serviceIds: this.normalizeIdArray(data.serviceIds),
             serviceDetails: data.serviceDetails || {},
-            status: data.status || "Pending",
             createdBy: userId || null
         });
     }
@@ -72,6 +82,13 @@ class ProjectOnboardService {
         const project = await projectOnboardRepository.findOneById(id);
         if (!project) throw new Error("Project not found.");
         return this.mapProjectAssignmentFields(project);
+    }
+
+    async deleteProjectOnboard(id) {
+        const project = await projectOnboardRepository.findOneById(id);
+        if (!project) throw new Error("Project not found.");
+        await projectOnboardRepository.delete(id);
+        return true;
     }
 
     async updateProjectOnboard(id, data) {
@@ -102,8 +119,6 @@ class ProjectOnboardService {
             ? Number(data.reportingHeadId)
             : existing.reportingHeadId || null;
 
-        const status = data.status || "In Progress";
-
         const transaction = await sequelize.transaction();
 
         try {
@@ -114,14 +129,11 @@ class ProjectOnboardService {
                     projectOnboardId: Number(id),
                     assignedToId,
                     reportingHeadId,
-                    status,
                     assignedBy: assignedBy ? Number(assignedBy) : null,
                     assignedAt: new Date()
                 })),
                 transaction
             );
-
-            await projectOnboardRepository.updateById(id, { status });
 
             await transaction.commit();
 

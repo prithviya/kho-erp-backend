@@ -34,7 +34,8 @@ const createUser = async (data) => {
       phone: data.phone || null,
       employeeRecord: data.employeeRecord || null,
       password: hashedPassword,
-      isActive: typeof data.isActive === "boolean" ? data.isActive : true
+      isActive: typeof data.isActive === "boolean" ? data.isActive : true,
+      canDelete: typeof data.canDelete === "boolean" ? data.canDelete : true
     }, { transaction });
 
     await user.setRoles(data.roleIds, { transaction });
@@ -78,7 +79,8 @@ const updateUser = async (id, data) => {
       username: data.username,
       phone: data.phone || null,
       employeeRecord: data.employeeRecord || null,
-      isActive: typeof data.isActive === "boolean" ? data.isActive : user.isActive
+      isActive: typeof data.isActive === "boolean" ? data.isActive : user.isActive,
+      canDelete: typeof data.canDelete === "boolean" ? data.canDelete : user.canDelete
     };
 
     if (data.password && String(data.password).trim()) {
@@ -101,6 +103,8 @@ const getUsers = () => {
   logger.info("Fetching all users.");
   return repository.getUsers();
 };
+
+const getDirectory = () => repository.getDirectory();
 
 const updateUserStatus = async (id, isActive) => {
   const user = await User.findByPk(id, { paranoid: false });
@@ -127,6 +131,7 @@ const deleteUser = async (id) => {
 module.exports = {
   createUser,
   getUsers,
+  getDirectory,
   updateUser,
   updateUserStatus,
   deleteUser

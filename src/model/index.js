@@ -101,6 +101,7 @@ db.Recruitment = require("./recruitment.model")( sequelize, DataTypes );
 db.Opening = require("./opening.model")( sequelize, DataTypes );
 db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes );
 db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes );
+db.Task = require("./task.model")( sequelize, DataTypes );
 db.Employee = require("./employee.model")( sequelize, DataTypes );
 db.Payroll = require("./payroll.model")( sequelize, DataTypes );
 db.LeaveCategory = require("./leaveCategory.model")( sequelize, DataTypes );
@@ -289,25 +290,61 @@ db.ProjectAssignment.belongsTo(db.ProjectOnboard, {
 
 // Project Assignment -> Assignee
 db.ProjectAssignment.belongsTo(db.User, {
-    foreignKey: "assignedToId",
-    as: "assignee",
+    foreignKey: "reportingHeadId",
+    as: "reportingHead",
 });
 
-db.User.hasMany(db.ProjectAssignment, {
+db.Employee.hasMany(db.ProjectAssignment, {
     foreignKey: "assignedToId",
     as: "projectAssignments",
 });
 
-// Project Assignment -> Reporting Head
-db.ProjectAssignment.belongsTo(db.User, {
-    foreignKey: "reportingHeadId",
-    as: "reportingHead",
+db.ProjectAssignment.belongsTo(db.Employee, {
+    foreignKey: "assignedToId",
+    as: "assignee",
 });
 
 // Project Assignment -> Assigned By
 db.ProjectAssignment.belongsTo(db.User, {
     foreignKey: "assignedBy",
     as: "assignedByUser",
+});
+
+
+//  TASK RELATIONSHIPS
+db.Task.belongsTo(db.ProjectOnboard, {
+    foreignKey: "projectOnboardId",
+    as: "project",
+});
+
+db.ProjectOnboard.hasMany(db.Task, {
+    foreignKey: "projectOnboardId",
+    as: "tasks",
+});
+
+db.Task.belongsTo(db.Service, {
+    foreignKey: "serviceId",
+    as: "service",
+});
+
+db.Task.belongsTo(db.User, {
+    foreignKey: "assignedToId",
+    as: "assignee",
+});
+
+db.User.hasMany(db.Task, {
+    foreignKey: "assignedToId",
+    as: "assignedTasks",
+});
+
+db.Task.belongsTo(db.User, {
+    foreignKey: "reportingHeadId",
+    as: "reportingHead",
+});
+
+db.Task.belongsTo(db.User, {
+    foreignKey: "createdBy",
+    as: "creator",
 });
 
 

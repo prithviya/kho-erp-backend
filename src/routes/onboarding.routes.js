@@ -6,7 +6,7 @@ const router = express.Router();
 
 const controller = require("../controllers/onboarding.controller");
 const authMiddleware = require("../middleware/auth.middleware");
-const { requireAnyRole } = require("../middleware/roleAccess.middleware");
+const { requireAnyRole, requireDeleteAccess } = require("../middleware/roleAccess.middleware");
 
 const uploadDir = path.resolve(
 	process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"),
@@ -50,6 +50,6 @@ router.post("/", authMiddleware, requireAnyRole(["hr"]), controller.create);
 router.get("/", authMiddleware, requireAnyRole(["hr"]), controller.getAll);
 router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getById);
 router.put("/:id", authMiddleware, requireAnyRole(["hr"]), controller.update);
-router.delete("/:id", authMiddleware, requireAnyRole(["hr"]), controller.delete);
+router.delete("/:id", authMiddleware, requireAnyRole(["super_admin"]), requireDeleteAccess, controller.delete);
 
 module.exports = router;

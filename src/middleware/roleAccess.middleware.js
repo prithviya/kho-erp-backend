@@ -98,6 +98,26 @@ function requireAnyRole(allowedRoles = []) {
     };
 }
 
+// Blocks a user whose per-account delete access has been switched off
+// (users.canDelete). Meant to run after authMiddleware / requireAnyRole.
+async function requireDeleteAccess(req, res, next) {
+    try {
+        if (!req.user?.id) {
+            return ApiResponse.unauthorized(res, "Unauthorized access.");
+        }
+
+        const user = await User.findByPk(req.user.id, { attributes: ["id", "canDelete"] });
+
+        if (!user || user.canDelete === false) {
+            return ApiResponse.forbidden(res, "Delete access is disabled for your account.");
+        }
+
+        return next();
+    } catch (error) {
+        return next(error);
+    }
+}
+
 function hasRole(req, role) {
     return Boolean(req.user?.roleSet?.has(normalizeRole(role)));
 }
@@ -106,5 +126,6 @@ module.exports = {
     normalizeRole,
     loadUserRoles,
     requireAnyRole,
+    requireDeleteAccess,
     hasRole,
 };

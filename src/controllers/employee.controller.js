@@ -21,3 +21,8 @@ exports.updateEmployee = asyncHandler(async (req, res) => {
     const employee = await employeeService.updateEmployee(req.params.id, req.body, req.file);
     return ApiResponse.success(res, "Employee updated successfully.", employee);
 });
+
+exports.deleteEmployee = asyncHandler(async (req, res) => {
+    await employeeService.deleteEmployee(req.params.id);
+    return ApiResponse.success(res, "Employee deleted successfully.");
+});

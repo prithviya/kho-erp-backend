@@ -24,3 +24,5 @@ npm i
 
 
 npm run dev - to run the backend server app
+
+npm run migrate

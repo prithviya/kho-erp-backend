@@ -129,6 +129,13 @@ class EmployeeService {
         const updated = await repository.update(id, updatePayload);
         return this.toResponse(updated);
     }
+
+    async deleteEmployee(id) {
+        const employee = await repository.getEmployeeById(id);
+        if (!employee) throw new Error("Employee not found.");
+        await repository.delete(id);
+        return true;
+    }
 }
 
 module.exports = new EmployeeService();

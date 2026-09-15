@@ -2,11 +2,12 @@ const router = require("express").Router();
 const controller = require("../controllers/serviceCategory.controller");
 const authMiddleware = require("../middleware/auth.middleware");
 const superAdminMiddleware = require("../middleware/superAdmin.middleware");
+const { requireDeleteAccess } = require("../middleware/roleAccess.middleware");
 
 router.post("/", authMiddleware, superAdminMiddleware, controller.create);
 router.get("/", authMiddleware, controller.getAll);
 router.get("/with-services", authMiddleware, controller.getWithServices);
 router.get("/:id", authMiddleware, controller.getById);
 router.put("/:id", authMiddleware, superAdminMiddleware, controller.update);
-router.delete("/:id", authMiddleware, superAdminMiddleware, controller.delete);
+router.delete("/:id", authMiddleware, superAdminMiddleware, requireDeleteAccess, controller.delete);
 module.exports = router;

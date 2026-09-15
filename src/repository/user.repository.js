@@ -38,6 +38,23 @@ class UserRepository extends BaseRepository {
         });
     }
 
+    // Slim, active-only list for pickers (assignees, reporting heads).
+    async getDirectory() {
+        return await User.findAll({
+            where: { isActive: true },
+            attributes: ["id", "firstName", "lastName", "email"],
+            include: [
+                {
+                    model: Role,
+                    as: "roles",
+                    attributes: ["id", "name", "code"],
+                    through: { attributes: [] }
+                }
+            ],
+            order: [["firstName", "ASC"], ["lastName", "ASC"]]
+        });
+    }
+
     async getUserWithRoles(id) {
         return await User.findByPk(id, {
             paranoid: false,

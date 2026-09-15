@@ -54,10 +54,11 @@ class AuthService {
     }
     // Login a user and generate tokens
     async login(data, sessionInfo) {
-        logger.info(`Attempting login for email: ${data.email}`);
-        const user = await authRepository.login(data.email);
-        if (!user) {
-            logger.warn(`Login failed for email: ${data.email}`);
+        const identifier = String(data.email || "").trim();
+        logger.info(`Attempting login for identifier: ${identifier}`);
+        const user = await authRepository.login(identifier);
+        if (!user || !user.isActive || user.deletedAt) {
+            logger.warn(`Login failed for identifier: ${identifier}`);
             const error = new Error("Invalid email or password.");
             error.status = 401;
             throw error;

@@ -162,12 +162,20 @@ module.exports = {
             },
         });
 
-        await queryInterface.addIndex("leave_requests", ["userId", "fromDate", "status"], {
-            name: "idx_leave_requests_user_date_status",
-        });
+        const requestIndexes = await queryInterface.showIndex("leave_requests");
+        if (!requestIndexes.some((index) => index.name === "idx_leave_requests_user_date_status")) {
+            await queryInterface.addIndex("leave_requests", ["userId", "fromDate", "status"], {
+                name: "idx_leave_requests_user_date_status",
+            });
+        }
 
         const now = new Date();
-        await queryInterface.bulkInsert("leave_categories", [
+        // Table may already be populated by seed.js; only insert missing codes.
+        const [existing] = await queryInterface.sequelize.query(
+            "SELECT code FROM leave_categories"
+        );
+        const existingCodes = new Set(existing.map((row) => row.code));
+        const categories = [
             {
                 code: "CASUAL_LEAVE",
                 name: "Casual Leave",
@@ -204,7 +212,11 @@ module.exports = {
                 createdAt: now,
                 updatedAt: now,
             },
-        ]);
+        ].filter((category) => !existingCodes.has(category.code));
+
+        if (categories.length > 0) {
+            await queryInterface.bulkInsert("leave_categories", categories);
+        }
     },
 
     async down(queryInterface) {

@@ -9,7 +9,8 @@ const createUserValidation = Joi.object({
     employeeRecord: Joi.string().trim().allow("", null),
     password: Joi.string().min(6).required(),
     roleIds: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
-    isActive: Joi.boolean().optional()
+    isActive: Joi.boolean().optional(),
+    canDelete: Joi.boolean().optional()
 });
 
 const updateUserValidation = Joi.object({
@@ -21,7 +22,8 @@ const updateUserValidation = Joi.object({
     employeeRecord: Joi.string().trim().allow("", null),
     password: Joi.string().min(6).allow("", null),
     roleIds: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
-    isActive: Joi.boolean().optional()
+    isActive: Joi.boolean().optional(),
+    canDelete: Joi.boolean().optional()
 });
 
 const updateUserStatusValidation = Joi.object({
