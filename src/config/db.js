@@ -28,6 +28,7 @@ if (DB_TYPE === 'postgres') {
     process.exit(1);
   });
 } else if (DB_TYPE === 'mysql') {
+  const maxAllowedPacket = Number(process.env.MAX_ALLOWED_PACKET || 256 * 1024 * 1024);
   pool = mysql.createPool({
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT),
@@ -37,6 +38,8 @@ if (DB_TYPE === 'postgres') {
     waitForConnections: true,
     connectionLimit: 20,
     queueLimit: 0,
+    charset: 'utf8mb4',
+    maxAllowedPacket,
   });
 } else {
   throw new Error('Invalid DB_TYPE. Use "postgres" or "mysql"');

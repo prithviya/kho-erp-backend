@@ -169,6 +169,53 @@ test('validateFinalFormData ignores UI-optional fields like officePhone, UAN, an
   assert.doesNotThrow(() => service.validateFinalFormData(formData));
 });
 
+test('validateFinalFormData requires only company, designation, startDate, and totalExp for each experience entry', () => {
+  const baseFormData = {
+    fullName: 'Nandhu',
+    employeeId: 'KHO-003',
+    personalEmail: 'nandhu@example.com',
+    personalPhone: '9876543210',
+    officialEmail: 'nandhu@company.com',
+    gender: 'Male',
+    maritalStatus: 'Single',
+    dateOfBirth: '2008-09-01',
+    dateOfJoining: '2026-09-11',
+    employeeType: 'Permanent',
+    erpRole: 'TEAM_MEMBER',
+    sourceOfHire: 'Naukri',
+    department: 'Designs',
+    designation: 'Graphics Designer',
+    reportingHead: 'nandhu',
+    panNumber: 'ABCDE1234F',
+    currentSalary: '963521',
+    currentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
+    permanentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
+    education: [{ qualification: 'BAS', institution: 'asd', board: 'asd', year: '2020', percentage: '90' }],
+    icebreaker: {},
+  };
+
+  assert.doesNotThrow(() => service.validateFinalFormData({
+    ...baseFormData,
+    experience: [{
+      company: 'Tech Co',
+      designation: 'Developer',
+      startDate: '2025-01-01',
+      totalExp: '3',
+      endDate: '2026-01-01',
+      reason: 'Career growth',
+    }],
+  }));
+
+  assert.throws(() => service.validateFinalFormData({
+    ...baseFormData,
+    experience: [{
+      company: 'Tech Co',
+      designation: 'Developer',
+      startDate: '2025-01-01',
+    }],
+  }), /one complete entry with Company, Designation, Start Date, and Total Experience is required/);
+});
+
 test('ensureEmployeeUserRecord creates a user with a random password for the mapped ERP role', async () => {
   const createdUsers = [];
   const createdLinks = [];

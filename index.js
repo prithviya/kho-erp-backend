@@ -29,9 +29,10 @@ app.use(morgan("dev"));
 /**
  * Body Parser
  */
+const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || "25mb";
 app.use(cookieParser());
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.json({ limit: requestBodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: requestBodyLimit }));
 /**
  * Rate Limiter
  */

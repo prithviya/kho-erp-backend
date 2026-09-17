@@ -1,6 +1,30 @@
 const db = require("../model");
 const logger = require("../helpers/logger");
 
+const ensureMySqlPacketLimit = async () => {
+    const maxAllowedPacket = Number(
+        process.env.MAX_ALLOWED_PACKET || 256 * 1024 * 1024
+    );
+
+    if (process.env.DB_TYPE !== "mysql" || !Number.isInteger(maxAllowedPacket)) {
+        return;
+    }
+
+    try {
+        await db.sequelize.query(
+            `SET GLOBAL max_allowed_packet = ${maxAllowedPacket}`
+        );
+        logger.info(`MySQL max_allowed_packet set to ${maxAllowedPacket} bytes.`);
+    } catch (error) {
+        logger.warn(
+            `Unable to set MySQL max_allowed_packet automatically: ${error?.message || String(error)}`
+        );
+        logger.warn(
+            `Set max_allowed_packet to at least ${maxAllowedPacket} on the MySQL server configuration and restart MySQL.`
+        );
+    }
+};
+
 const ensureOnboardingCompatibilityColumns = async () => {
     try {
         const tableName = "onboardings";
@@ -63,10 +87,26 @@ const ensureOnboardingCompatibilityColumns = async () => {
     }
 };
 
+const ensureUserCompatibilityColumns = async () => {
+    const tableName = "users";
+    const [columns] = await db.sequelize.query(
+        `SHOW COLUMNS FROM \`${tableName}\``
+    );
+    const fieldNames = new Set(columns.map((col) => col.Field));
+
+    if (!fieldNames.has("canDelete")) {
+        await db.sequelize.query(
+            `ALTER TABLE \`${tableName}\` ADD COLUMN \`canDelete\` TINYINT(1) NOT NULL DEFAULT 1`
+        );
+        logger.info("Added missing users.canDelete compatibility column.");
+    }
+};
+
 const connectDatabase = async () => {
     try {
         await db.sequelize.authenticate();
         logger.info("MySQL Connected Successfully");
+        await ensureMySqlPacketLimit();
 
         try {
             const autoSyncEnabled = process.env.DB_AUTO_SYNC !== "false";
@@ -84,6 +124,7 @@ const connectDatabase = async () => {
             }
 
             await ensureOnboardingCompatibilityColumns();
+            await ensureUserCompatibilityColumns();
             await db.sequelize.sync(alterSyncEnabled ? { alter: true } : undefined);
             logger.info(
                 alterSyncEnabled
