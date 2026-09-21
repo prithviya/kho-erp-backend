@@ -411,6 +411,16 @@ db.LeaveRequest.belongsTo(db.User, {
     as: "approver",
 });
 
+db.User.hasMany(db.LeaveRequest, {
+    foreignKey: "designatedApproverId",
+    as: "designatedLeaveRequests",
+});
+
+db.LeaveRequest.belongsTo(db.User, {
+    foreignKey: "designatedApproverId",
+    as: "designatedApprover",
+});
+
 
 db.Opening.belongsTo(db.Department, {
     foreignKey: "departmentId",

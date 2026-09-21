@@ -75,6 +75,10 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: true,
             },
+            designatedApproverId: {
+                type: DataTypes.INTEGER,
+                allowNull: true,
+            },
             approverRemarks: {
                 type: DataTypes.STRING(500),
                 allowNull: true,

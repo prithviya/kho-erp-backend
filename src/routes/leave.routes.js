@@ -24,7 +24,6 @@ router.put("/requests/:id", authMiddleware, updateLeaveRequestValidation, valida
 router.patch(
 	"/requests/:id/status",
 	authMiddleware,
-	requireAnyRole(["hr", "manager"]),
 	updateLeaveStatusValidation,
 	validate,
 	controller.updateRequestStatus

@@ -2,6 +2,11 @@ const { Op } = require("sequelize");
 const db = require("../model");
 
 const APPROVER_ROLES = new Set(["hr", "manager", "superadmin"]);
+const CONFLICTING_LEAVE_CODES = new Set([
+    "CASUAL_LEAVE",
+    "LEAVE_WITHOUT_PAY",
+    "PERMISSION",
+]);
 
 function normalizeRole(value = "") {
     return String(value)
@@ -64,7 +69,206 @@ function getYearRange(year) {
     return [`${year}-01-01`, `${year}-12-31`];
 }
 
+function getMonthDateRange(year, month) {
+    const monthValue = String(month).padStart(2, "0");
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return [`${year}-${monthValue}-01`, `${year}-${monthValue}-${String(lastDay).padStart(2, "0")}`];
+}
+
+function getMonthKeys(fromDate, toDate) {
+    const keys = [];
+    let year = Number(String(fromDate).slice(0, 4));
+    let month = Number(String(fromDate).slice(5, 7));
+    const endYear = Number(String(toDate).slice(0, 4));
+    const endMonth = Number(String(toDate).slice(5, 7));
+
+    while (year < endYear || (year === endYear && month <= endMonth)) {
+        keys.push({ year, month });
+        month += 1;
+        if (month === 13) {
+            month = 1;
+            year += 1;
+        }
+    }
+
+    return keys;
+}
+
+function validateCategoryDuration(category, durationType) {
+    const allowedDurations = {
+        CASUAL_LEAVE: ["FULL_DAY", "HALF_DAY"],
+        ON_THE_DUTY: ["FULL_DAY", "HALF_DAY", "QUARTER_DAY", "HOURS"],
+        LEAVE_WITHOUT_PAY: ["FULL_DAY", "HALF_DAY", "HOURS"],
+        PERMISSION: ["HOURS"],
+    }[category.code];
+
+    if (allowedDurations && !allowedDurations.includes(durationType)) {
+        throw new Error(`${category.name} does not support ${durationType.replace("_", " ").toLowerCase()}.`);
+    }
+}
+
 class LeaveService {
+    async resolveDesignatedApprover(requester) {
+        if (!requester?.employeeRecord) {
+            return null;
+        }
+
+        const onboardingInfo = await db.OnboardingInfo.findOne({
+            where: { employeeId: requester.employeeRecord },
+            attributes: ["reportHead"],
+            order: [["onboardinginfoid", "DESC"]],
+        });
+        const configuredHead = String(onboardingInfo?.reportHead || "").trim();
+        if (!configuredHead) {
+            return null;
+        }
+
+        if (/^\d+$/.test(configuredHead)) {
+            const byId = await db.User.findOne({
+                where: { id: Number(configuredHead), isActive: true },
+            });
+            if (byId && Number(byId.id) !== Number(requester.id)) {
+                return byId;
+            }
+        }
+
+        const users = await db.User.findAll({
+            where: { isActive: true },
+            attributes: ["id", "firstName", "lastName", "email", "employeeRecord"],
+        });
+        const normalizedHead = configuredHead.toLowerCase().replace(/\s+/g, " ");
+        return users.find((user) => {
+            if (Number(user.id) === Number(requester.id)) return false;
+            const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim().toLowerCase();
+            return [user.email, user.employeeRecord, displayName]
+                .filter(Boolean)
+                .some((value) => String(value).trim().toLowerCase() === normalizedHead);
+        }) || null;
+    }
+
+    getRequestAccessWhere(filters = {}, actor = {}) {
+        const actorId = Number(actor.id);
+        if (isApprover(actor) && !filters.userId) {
+            const where = {};
+            if (filters.status) {
+                where.status = String(filters.status).toUpperCase();
+            }
+            if (filters.year) {
+                const year = Number(filters.year);
+                if (Number.isInteger(year) && year > 2000) {
+                    where.fromDate = {
+                        [Op.between]: [`${year}-01-01`, `${year}-12-31`],
+                    };
+                }
+            }
+            return where;
+        }
+
+        const where = {
+            [Op.or]: [
+                { userId: actorId },
+                { designatedApproverId: actorId },
+            ],
+        };
+
+        if (filters.userId) {
+            where[Op.or] = [{ userId: Number(filters.userId) }];
+            if (Number(filters.userId) === actorId) {
+                where[Op.or].push({ designatedApproverId: actorId });
+            }
+        }
+
+        if (filters.status) {
+            where.status = String(filters.status).toUpperCase();
+        }
+
+        if (filters.year) {
+            const year = Number(filters.year);
+            if (Number.isInteger(year) && year > 2000) {
+                where.fromDate = {
+                    [Op.between]: [`${year}-01-01`, `${year}-12-31`],
+                };
+            }
+        }
+
+        return where;
+    }
+
+    async ensureConflictingLeaveOverlap({ userId, category, fromDate, toDate, excludeRequestId = null }) {
+        if (!CONFLICTING_LEAVE_CODES.has(category.code)) {
+            return;
+        }
+
+        const where = {
+            userId,
+            fromDate: { [Op.lte]: toDate },
+            toDate: { [Op.gte]: fromDate },
+            status: { [Op.in]: ["PENDING", "APPROVED"] },
+        };
+
+        if (excludeRequestId) {
+            where.id = { [Op.ne]: excludeRequestId };
+        }
+
+        const existingRequests = await db.LeaveRequest.findAll({
+            where,
+            include: [{
+                model: db.LeaveCategory,
+                as: "category",
+                attributes: ["code", "name"],
+            }],
+        });
+
+        const conflictingCodes = {
+            CASUAL_LEAVE: ["LEAVE_WITHOUT_PAY", "PERMISSION"],
+            LEAVE_WITHOUT_PAY: ["CASUAL_LEAVE", "PERMISSION"],
+            PERMISSION: ["CASUAL_LEAVE", "LEAVE_WITHOUT_PAY"],
+        };
+        const conflictingRequest = existingRequests.find((request) =>
+            conflictingCodes[category.code]?.includes(request.category?.code)
+        );
+
+        if (conflictingRequest) {
+            const error = new Error(
+                `${conflictingRequest.category.name} is already booked for an overlapping date.`
+            );
+            error.status = 400;
+            throw error;
+        }
+    }
+
+    async ensureCasualLeaveMonthsAvailable({ userId, categoryId, fromDate, toDate, requestedDays, excludeRequestId = null }) {
+        const monthKeys = getMonthKeys(fromDate, toDate);
+
+        if (toNumber(requestedDays) > monthKeys.length) {
+            const error = new Error("Casual Leave is limited to 1 day per calendar month.");
+            error.status = 400;
+            throw error;
+        }
+
+        for (const { year, month } of monthKeys) {
+            const [monthStart, monthEnd] = getMonthDateRange(year, month);
+            const where = {
+                userId,
+                categoryId,
+                fromDate: { [Op.lte]: monthEnd },
+                toDate: { [Op.gte]: monthStart },
+                status: { [Op.in]: ["PENDING", "APPROVED"] },
+            };
+
+            if (excludeRequestId) {
+                where.id = { [Op.ne]: excludeRequestId };
+            }
+
+            const existingRequest = await db.LeaveRequest.findOne({ where });
+            if (existingRequest) {
+                const error = new Error(`Casual Leave is already booked for ${year}-${String(month).padStart(2, "0")}.`);
+                error.status = 400;
+                throw error;
+            }
+        }
+    }
+
     async getCategoryBookingStats({ userId, categoryId, year, throughDate = null, excludeRequestId = null }) {
         const [fromYearDate, toYearDate] = getYearRange(year);
         const where = {
@@ -89,7 +293,7 @@ class LeaveService {
         );
     }
 
-    async ensureBalanceAvailable({ category, userId, fromDate, requestedDays, requestedHours, excludeRequestId = null }) {
+    async ensureBalanceAvailable({ category, userId, fromDate, toDate, requestedDays, requestedHours, excludeRequestId = null }) {
         if (category.code === "LEAVE_WITHOUT_PAY") {
             return;
         }
@@ -98,15 +302,15 @@ class LeaveService {
         let allocated = toNumber(category.allocatedValue);
 
         if (category.code === "CASUAL_LEAVE") {
-            const month = Number(String(fromDate).slice(5, 7));
-            const currentYear = new Date().getFullYear();
-            if (year < currentYear) {
-                allocated = 12;
-            } else if (year === currentYear) {
-                allocated = Math.max(0, 12 - new Date().getMonth());
-            } else {
-                allocated = 0;
-            }
+            await this.ensureCasualLeaveMonthsAvailable({
+                userId,
+                categoryId: category.id,
+                fromDate,
+                toDate: toDate || fromDate,
+                requestedDays,
+                excludeRequestId,
+            });
+            return;
         } else if (category.code === "PERMISSION") {
             const fromDateObj = new Date(fromDate);
             const month = fromDateObj.getMonth();
@@ -254,12 +458,17 @@ class LeaveService {
 
     async listRequests(filters = {}, actor = {}) {
         return db.LeaveRequest.findAll({
-            where: this.getRequestWhere(filters, actor),
+            where: this.getRequestAccessWhere(filters, actor),
             include: [
                 {
                     model: db.LeaveCategory,
                     as: "category",
                     attributes: ["id", "code", "name", "unit", "allocatedValue"],
+                },
+                {
+                    model: db.User,
+                    as: "designatedApprover",
+                    attributes: ["id", "firstName", "lastName", "email"],
                 },
             ],
             order: [["createdAt", "DESC"]],
@@ -274,6 +483,11 @@ class LeaveService {
                     as: "category",
                     attributes: ["id", "code", "name", "unit", "allocatedValue"],
                 },
+                {
+                    model: db.User,
+                    as: "designatedApprover",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
             ],
         });
 
@@ -281,7 +495,11 @@ class LeaveService {
             return null;
         }
 
-        if (!isApprover(actor) && Number(request.userId) !== Number(actor.id)) {
+        if (
+            Number(request.userId) !== Number(actor.id) &&
+            Number(request.designatedApproverId) !== Number(actor.id) &&
+            !isApprover(actor)
+        ) {
             const error = new Error("You can only view your own leave requests.");
             error.status = 403;
             throw error;
@@ -303,6 +521,7 @@ class LeaveService {
         }
 
         const durationType = String(payload.durationType || "FULL_DAY").toUpperCase();
+        validateCategoryDuration(category, durationType);
 
         let requestedDays = 0;
         let requestedHours = 0;
@@ -391,10 +610,19 @@ class LeaveService {
             }
         }
 
+        await this.ensureConflictingLeaveOverlap({
+            userId,
+            category: finalCategory,
+            fromDate: adjustedCalculated.fromDate,
+            toDate: adjustedCalculated.toDate,
+            excludeRequestId,
+        });
+
         await this.ensureBalanceAvailable({
             category: finalCategory,
             userId,
             fromDate: adjustedCalculated.fromDate,
+            toDate: adjustedCalculated.toDate,
             requestedDays: adjustedCalculated.requestedDays,
             requestedHours: adjustedCalculated.requestedHours,
             excludeRequestId
@@ -427,6 +655,8 @@ class LeaveService {
             throw new Error("Requester user not found.");
         }
 
+        const designatedApprover = await this.resolveDesignatedApprover(requester);
+
         const calculated = await this.computeAmount(category, payload);
 
         const { finalCategory, adjustedCalculated } = await this.applyLeaveRules(
@@ -451,6 +681,7 @@ class LeaveService {
             requestedHours: adjustedCalculated.requestedHours,
             reason: payload.reason || null,
             status: "PENDING",
+            designatedApproverId: designatedApprover?.id || null,
         });
     }
 
@@ -547,15 +778,15 @@ class LeaveService {
     }
 
     async updateRequestStatus(id, payload = {}, actor = {}) {
-        if (!isApprover(actor)) {
-            const error = new Error("Only HR, Manager, or Super Admin can approve/reject leave requests.");
-            error.status = 403;
-            throw error;
-        }
-
         const request = await db.LeaveRequest.findByPk(id);
         if (!request) {
             return null;
+        }
+
+        if (Number(request.designatedApproverId) !== Number(actor.id)) {
+            const error = new Error("Only the employee's designated reporting approver can approve or reject this leave request.");
+            error.status = 403;
+            throw error;
         }
 
         const status = String(payload.status || "")
@@ -652,6 +883,14 @@ class LeaveService {
         requests.forEach((request) => {
             const entry = byCategory.get(request.categoryId);
             if (!entry) return;
+
+            if (
+                entry.code === "CASUAL_LEAVE" &&
+                year === new Date().getFullYear() &&
+                Number(String(request.fromDate).slice(5, 7)) < new Date().getMonth() + 1
+            ) {
+                return;
+            }
 
             const amount = entry.unit === "HOUR"
                 ? toNumber(request.requestedHours)
