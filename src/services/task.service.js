@@ -96,7 +96,17 @@ class TaskService {
             if (!project) throw httpError("Project not found.", 404);
 
             if (data.serviceId) {
-                const serviceIds = Array.isArray(project.serviceIds) ? project.serviceIds.map(Number) : [];
+                let storedServiceIds = project.serviceIds;
+                if (typeof storedServiceIds === "string") {
+                    try {
+                        storedServiceIds = JSON.parse(storedServiceIds);
+                    } catch {
+                        storedServiceIds = [];
+                    }
+                }
+                const serviceIds = Array.isArray(storedServiceIds)
+                    ? storedServiceIds.map((service) => Number(typeof service === "object" ? service.id ?? service.serviceId : service)).filter(Number.isFinite)
+                    : [];
                 if (!serviceIds.includes(Number(data.serviceId))) {
                     throw httpError("Selected service is not part of this project.");
                 }
