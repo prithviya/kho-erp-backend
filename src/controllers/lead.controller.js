@@ -31,7 +31,11 @@ exports.getLeadById = asyncHandler(async (req, res) => {
 });
  
 exports.createLead = asyncHandler(async (req, res) => {
-    const lead = await leadService.createLead(req.body, req.user.id);
+    const payload = { ...req.body };
+    if (hasRole(req, "crm_executive") && !req.user.isSuperAdmin) {
+        payload.assignedTo = req.user.id;
+    }
+    const lead = await leadService.createLead(payload, req.user.id);
     return ApiResponse.created(res, LEAD.CREATED, lead);
 });
 

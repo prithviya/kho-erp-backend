@@ -3,7 +3,7 @@ const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
 
 exports.createProjectOnboard = asyncHandler(async (req, res) => {
-    const { projectName, companyName, serviceIds } = req.body;
+    const { projectName, companyName, serviceIds, projectManagerIds } = req.body;
 
     if (!projectName || !String(projectName).trim()) {
         return ApiResponse.error(res, "Project name is required.", null, 400);
@@ -13,6 +13,9 @@ exports.createProjectOnboard = asyncHandler(async (req, res) => {
     }
     if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
         return ApiResponse.error(res, "At least one service is required.", null, 400);
+    }
+    if (!Array.isArray(projectManagerIds) || projectManagerIds.length === 0) {
+        return ApiResponse.error(res, "Reporting Head is required.", null, 400);
     }
 
     const created = await projectOnboardService.createProjectOnboard(req.body, req.user?.id);
@@ -35,7 +38,7 @@ exports.deleteProjectOnboard = asyncHandler(async (req, res) => {
 });
 
 exports.updateProjectOnboard = asyncHandler(async (req, res) => {
-    const { projectName, companyName, serviceIds } = req.body;
+    const { projectName, companyName, serviceIds, projectManagerIds } = req.body;
 
     if (!projectName || !String(projectName).trim()) {
         return ApiResponse.error(res, "Project name is required.", null, 400);
@@ -45,6 +48,9 @@ exports.updateProjectOnboard = asyncHandler(async (req, res) => {
     }
     if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
         return ApiResponse.error(res, "At least one service is required.", null, 400);
+    }
+    if (!Array.isArray(projectManagerIds) || projectManagerIds.length === 0) {
+        return ApiResponse.error(res, "Reporting Head is required.", null, 400);
     }
 
     const updated = await projectOnboardService.updateProjectOnboard(req.params.id, req.body);

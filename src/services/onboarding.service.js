@@ -412,6 +412,36 @@ class OnboardingService extends BaseService {
             }
         });
 
+        const validatePhone = (phoneKey, countryCodeKey, label, required = false) => {
+            const phone = String(formData[phoneKey] || "").trim();
+            const countryCode = String(formData[countryCodeKey] || "").trim();
+
+            if (!phone && !required) return;
+            if (!phone) {
+                errors.push(label);
+                return;
+            }
+            if (!/^\d{10}$/.test(phone)) {
+                errors.push(label);
+            }
+            if (!/^\+\d{1,4}$/.test(countryCode)) {
+                errors.push(`${label} country code`);
+            }
+        };
+
+        validatePhone("personalPhone", "personalPhoneCountryCode", "Basic Details: personalPhone", true);
+        validatePhone("officePhone", "officePhoneCountryCode", "Basic Details: officePhone");
+
+        const health = formData.health || {};
+        const emergencyNumber = String(health.emergencyNumber || "").trim();
+        const emergencyCountryCode = String(health.emergencyPhoneCountryCode || "").trim();
+        if (!/^\d{10}$/.test(emergencyNumber)) {
+            errors.push("Health: emergencyNumber");
+        }
+        if (!/^\+\d{1,4}$/.test(emergencyCountryCode)) {
+            errors.push("Health: emergencyPhoneCountryCode");
+        }
+
         const requiredEmploymentFields = [
             ["employeeType", "Employment Information: employeeType"],
             ["erpRole", "Employment Information: erpRole"],
@@ -459,23 +489,6 @@ class OnboardingService extends BaseService {
             if (!validEducation) {
                 errors.push(
                     "Education Details: one complete entry with qualification, institution/board, year, and percentage is required"
-                );
-            }
-        }
-
-        if (experience.length === 0) {
-            errors.push("Experience Details: at least one experience entry is required");
-        } else {
-            const validExperience = experience.some(
-                (exp) =>
-                    this.hasText(exp?.company) &&
-                    this.hasText(exp?.designation) &&
-                    this.hasText(exp?.startDate) &&
-                    this.hasText(exp?.totalExp)
-            );
-            if (!validExperience) {
-                errors.push(
-                    "Experience Details: one complete entry with company, designation, startDate, and totalExp is required"
                 );
             }
         }

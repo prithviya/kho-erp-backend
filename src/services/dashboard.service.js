@@ -1,7 +1,17 @@
 const { User, Lead, LeadStatus, Role, Opening } = require("../model");
 
 class DashboardService {
-    async getOverview() {
+    async getOverview(user) {
+        const roleSet = user?.roleSet instanceof Set
+            ? user.roleSet
+            : new Set((user?.roles || []).map((role) => String(role?.name || role)
+                .trim()
+                .toLowerCase()
+                .replace(/[\s_-]+/g, "")));
+        const isCrmUser = roleSet.has("crmexecutive") && !user?.isSuperAdmin;
+        const leadWhere = isCrmUser
+            ? { isActive: true, assignedTo: user.id }
+            : { isActive: true };
         const statuses = await LeadStatus.findAll({
             attributes: ["id", "name", "code"]
         });
@@ -29,7 +39,7 @@ class DashboardService {
                 limit: 5
             }),
             Lead.findAll({
-                where: { isActive: true },
+                where: leadWhere,
                 attributes: ["id", "companyName", "contactPerson", "budget", "createdAt"],
                 include: [
                     {
@@ -41,7 +51,7 @@ class DashboardService {
                 order: [["createdAt", "DESC"]],
                 limit: 5
             }),
-            Lead.count({ where: { isActive: true } }),
+            Lead.count({ where: leadWhere }),
             User.count({ where: { isActive: true } }),
             Opening.findAll({
                 where: { isActive: true },
@@ -54,7 +64,7 @@ class DashboardService {
         const convertedDeals = convertedStatusIds.length
             ? await Lead.count({
                 where: {
-                    isActive: true,
+                    ...leadWhere,
                     leadStatusId: convertedStatusIds
                 }
             })
@@ -67,7 +77,7 @@ class DashboardService {
                 convertedDeals,
                 activeUsers: activeUsersCount
             },
-            activeUsers: activeUsers.map((user) => ({
+            activeUsers: isCrmUser ? [] : activeUsers.map((user) => ({
                 id: user.id,
                 name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
                 email: user.email,
@@ -82,7 +92,7 @@ class DashboardService {
                 status: lead.leadStatus?.name || "",
                 statusColor: lead.leadStatus?.color || ""
             })),
-            hiring: openings.map((op) => ({
+            hiring: isCrmUser ? [] : openings.map((op) => ({
                 id: op.jobid,
                 jobTitle: op.jobTitle,
                 experience: op.requiredSkills,

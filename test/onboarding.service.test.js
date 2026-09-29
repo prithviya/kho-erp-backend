@@ -146,6 +146,7 @@ test('validateFinalFormData ignores UI-optional fields like officePhone, UAN, an
     employeeId: 'KHO-003',
     personalEmail: 'nandhu@example.com',
     personalPhone: '9876543210',
+    personalPhoneCountryCode: '+91',
     officialEmail: 'nandhu@company.com',
     gender: 'Male',
     maritalStatus: 'Single',
@@ -162,6 +163,7 @@ test('validateFinalFormData ignores UI-optional fields like officePhone, UAN, an
     currentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
     permanentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
     education: [{ qualification: 'BAS', institution: 'asd', board: 'asd', year: '2020', percentage: '90' }],
+    health: { emergencyNumber: '9876543210', emergencyPhoneCountryCode: '+91' },
     experience: [{ company: 'nandhu', designation: 'General team member role', startDate: '2026-01-01', totalExp: '1' }],
     icebreaker: {},
   };
@@ -169,12 +171,13 @@ test('validateFinalFormData ignores UI-optional fields like officePhone, UAN, an
   assert.doesNotThrow(() => service.validateFinalFormData(formData));
 });
 
-test('validateFinalFormData requires only company, designation, startDate, and totalExp for each experience entry', () => {
+test('validateFinalFormData allows onboarding without experience details', () => {
   const baseFormData = {
     fullName: 'Nandhu',
     employeeId: 'KHO-003',
     personalEmail: 'nandhu@example.com',
     personalPhone: '9876543210',
+    personalPhoneCountryCode: '+91',
     officialEmail: 'nandhu@company.com',
     gender: 'Male',
     maritalStatus: 'Single',
@@ -191,29 +194,19 @@ test('validateFinalFormData requires only company, designation, startDate, and t
     currentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
     permanentAddress: { line1: 'CBE', city: 'CBE', state: 'CBE', pincode: '666666' },
     education: [{ qualification: 'BAS', institution: 'asd', board: 'asd', year: '2020', percentage: '90' }],
+    health: { emergencyNumber: '9876543210', emergencyPhoneCountryCode: '+91' },
     icebreaker: {},
   };
 
   assert.doesNotThrow(() => service.validateFinalFormData({
     ...baseFormData,
-    experience: [{
-      company: 'Tech Co',
-      designation: 'Developer',
-      startDate: '2025-01-01',
-      totalExp: '3',
-      endDate: '2026-01-01',
-      reason: 'Career growth',
-    }],
+    experience: [],
   }));
 
   assert.throws(() => service.validateFinalFormData({
     ...baseFormData,
-    experience: [{
-      company: 'Tech Co',
-      designation: 'Developer',
-      startDate: '2025-01-01',
-    }],
-  }), /one complete entry with Company, Designation, Start Date, and Total Experience is required/);
+    personalPhoneCountryCode: '91',
+  }), /personalPhone country code/);
 });
 
 test('ensureEmployeeUserRecord creates a user with a random password for the mapped ERP role', async () => {
