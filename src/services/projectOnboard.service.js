@@ -1,4 +1,4 @@
-const { Lead, ProjectOnboard, sequelize } = require("../model");
+const { Lead, ProjectOnboard, Employee, sequelize } = require("../model");
 const projectAssignmentRepository = require("../repository/projectAssignment.repository");
 const projectOnboardRepository = require("../repository/projectOnboard.repository");
 
@@ -113,6 +113,16 @@ class ProjectOnboardService {
 
         if (!assignedToIds.length) {
             throw new Error("At least one assignee is required.");
+        }
+
+        const validEmployees = await Employee.findAll({
+            where: { id: assignedToIds },
+            attributes: ["id"]
+        });
+        if (validEmployees.length !== new Set(assignedToIds).size) {
+            const error = new Error("One or more assignees are not valid employees.");
+            error.status = 400;
+            throw error;
         }
 
         const reportingHeadId = data.reportingHeadId
