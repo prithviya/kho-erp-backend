@@ -17,7 +17,7 @@ router.get("/", authMiddleware, controller.getTasks);
 router.get("/:id", authMiddleware, taskIdParamValidation, validate, controller.getTaskById);
 
 // Only managers (and super admins) allocate work.
-router.post("/", authMiddleware, requireAnyRole(["manager"]), createTaskValidation, validate, controller.createTask);
+router.post("/", authMiddleware, requireAnyRole(["manager", "team_member"]), createTaskValidation, validate, controller.createTask);
 router.put("/:id", authMiddleware, requireAnyRole(["manager"]), updateTaskValidation, validate, controller.updateTask);
 
 // Assignee, reporting head, or super admin may move a task along.

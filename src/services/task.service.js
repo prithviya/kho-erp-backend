@@ -149,6 +149,29 @@ class TaskService {
         if (!payload.projectOnboardId) throw httpError("Project is required.");
         if (!payload.assignedToId) throw httpError("Assignee is required.");
 
+        const project = await ProjectOnboard.findByPk(payload.projectOnboardId);
+        if (!project) throw httpError("Project not found.", 404);
+
+        const parseIds = (value) => {
+            if (Array.isArray(value)) return value;
+            if (typeof value !== "string") return value === undefined || value === null ? [] : [value];
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+            } catch {
+                return value.trim() ? [value] : [];
+            }
+        };
+        const isSpoc = parseIds(project.spocIds).some((id) => Number(id) === Number(actor.id));
+        if (!actor.isSuperAdmin && !isManager(actor) && !isSpoc) {
+            throw httpError("Only the project SPOC can create tasks for this project.", 403);
+        }
+
+        const assignedToIds = parseIds(project.assignedToIds);
+        if (assignedToIds.length && !assignedToIds.some((id) => Number(id) === Number(payload.assignedToId))) {
+            throw httpError("The selected assignee is not assigned to this project.", 403);
+        }
+
         // A manager creating a task is the reporting head by default.
         if (!payload.reportingHeadId && !actor.isSuperAdmin) {
             payload.reportingHeadId = Number(actor.id);

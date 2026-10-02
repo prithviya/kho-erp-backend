@@ -2,14 +2,20 @@
 
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.addColumn("lead_history", "oldFollowupDate", {
-            type: Sequelize.DATEONLY,
-            allowNull: true,
-        });
-        await queryInterface.addColumn("lead_history", "newFollowupDate", {
-            type: Sequelize.DATEONLY,
-            allowNull: true,
-        });
+        const columns = await queryInterface.describeTable("lead_history");
+
+        if (!columns.oldFollowupDate) {
+            await queryInterface.addColumn("lead_history", "oldFollowupDate", {
+                type: Sequelize.DATEONLY,
+                allowNull: true,
+            });
+        }
+        if (!columns.newFollowupDate) {
+            await queryInterface.addColumn("lead_history", "newFollowupDate", {
+                type: Sequelize.DATEONLY,
+                allowNull: true,
+            });
+        }
     },
 
     async down(queryInterface) {

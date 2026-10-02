@@ -2,32 +2,11 @@
 
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.removeColumn("project_onboards", "status");
-        await queryInterface.removeColumn("project_assignments", "status");
+        const projectColumns = await queryInterface.describeTable("project_onboards");
+        const assignmentColumns = await queryInterface.describeTable("project_assignments");
 
-        const foreignKeys = await queryInterface.getForeignKeyReferencesForTable("project_assignments");
-        const assignedToForeignKey = foreignKeys.find((foreignKey) => (
-            foreignKey.columnName === "assignedToId"
-        ));
-
-        if (assignedToForeignKey) {
-            await queryInterface.removeConstraint(
-                "project_assignments",
-                assignedToForeignKey.constraintName
-            );
-        }
-
-        await queryInterface.addConstraint("project_assignments", {
-            fields: ["assignedToId"],
-            type: "foreign key",
-            name: "project_assignments_assignedToId_employees_fk",
-            references: {
-                table: "employees",
-                field: "id"
-            },
-            onUpdate: "CASCADE",
-            onDelete: "RESTRICT"
-        });
+        if (projectColumns.status) await queryInterface.removeColumn("project_onboards", "status");
+        if (assignmentColumns.status) await queryInterface.removeColumn("project_assignments", "status");
     },
 
     async down(queryInterface, Sequelize) {

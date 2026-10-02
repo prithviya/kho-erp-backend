@@ -1,4 +1,4 @@
-const { Lead, ProjectOnboard, Employee, sequelize } = require("../model");
+const { Lead, ProjectOnboard, User, Vendor, sequelize } = require("../model");
 const projectAssignmentRepository = require("../repository/projectAssignment.repository");
 const projectOnboardRepository = require("../repository/projectOnboard.repository");
 
@@ -8,6 +8,19 @@ class ProjectOnboardService {
         return value
             .map((item) => Number(item))
             .filter((id) => Number.isFinite(id) && id > 0);
+    }
+
+    parseIdArray(value) {
+        if (Array.isArray(value)) return value;
+        if (typeof value === "string") {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+            } catch {
+                return value.trim() ? [value] : [];
+            }
+        }
+        return value === null || value === undefined || value === "" ? [] : [value];
     }
 
     mapProjectAssignmentFields(project) {
@@ -42,6 +55,31 @@ class ProjectOnboardService {
         };
     }
 
+    async attachAssignmentUsers(projects) {
+        const records = Array.isArray(projects) ? projects : [projects];
+        const ids = [...new Set(records.flatMap((project) => [
+            ...this.parseIdArray(project.spocIds),
+            ...this.parseIdArray(project.projectManagerIds),
+            ...this.parseIdArray(project.assignedToIds),
+            project.reportingHeadId
+        ]).map(Number).filter(Number.isFinite))];
+        const users = ids.length ? await User.findAll({ where: { id: ids }, attributes: ["id", "firstName", "lastName", "email"] }) : [];
+        const userMap = new Map(users.map((user) => [Number(user.id), user.toJSON()]));
+        const vendorIds = [...new Set(records.flatMap((project) => this.parseIdArray(project.assignedVendorIds)).map(Number).filter(Number.isFinite))];
+        const vendors = vendorIds.length ? await Vendor.findAll({ where: { vendorId: vendorIds } }) : [];
+        const vendorMap = new Map(vendors.map((vendor) => [Number(vendor.vendorId), vendor.toJSON()]));
+
+        return records.map((project) => ({
+            ...project,
+            spocUsers: this.parseIdArray(project.spocIds).map((id) => userMap.get(Number(id))).filter(Boolean),
+            reportingHeadUser: userMap.get(Number(project.reportingHeadId))
+                || this.parseIdArray(project.projectManagerIds).map((id) => userMap.get(Number(id))).find(Boolean)
+                || null,
+            assignedUsers: this.parseIdArray(project.assignedToIds).map((id) => userMap.get(Number(id))).filter(Boolean)
+            , assignedVendorUsers: this.parseIdArray(project.assignedVendorIds).map((id) => vendorMap.get(Number(id))).filter(Boolean)
+        }));
+    }
+
     async createProjectOnboard(data, userId) {
         if (data.leadId) {
             const lead = await Lead.findByPk(data.leadId, { paranoid: false });
@@ -73,15 +111,24 @@ class ProjectOnboardService {
         });
     }
 
-    async listProjectOnboards() {
+    async listProjectOnboards(actor = {}) {
         const projects = await projectOnboardRepository.listAll();
-        return projects.map((project) => this.mapProjectAssignmentFields(project));
+        const mapped = await this.attachAssignmentUsers(projects.map((project) => this.mapProjectAssignmentFields(project)));
+        if (actor.isSuperAdmin || actor.roleSet?.has("manager")) return mapped;
+
+        const userId = Number(actor.id);
+        return mapped.filter((project) => [
+            ...this.parseIdArray(project.spocIds),
+            ...this.parseIdArray(project.assignedToIds)
+            , ...this.parseIdArray(project.assignedVendorIds)
+        ].some((id) => Number(id) === userId));
     }
 
     async getProjectOnboardById(id) {
         const project = await projectOnboardRepository.findOneById(id);
         if (!project) throw new Error("Project not found.");
-        return this.mapProjectAssignmentFields(project);
+        const [mapped] = await this.attachAssignmentUsers([this.mapProjectAssignmentFields(project)]);
+        return mapped;
     }
 
     async deleteProjectOnboard(id) {
@@ -110,17 +157,24 @@ class ProjectOnboardService {
     async assignProjectOnboard(id, data, assignedBy = null) {
         const existing = await this.getProjectOnboardById(id);
         const assignedToIds = this.normalizeIdArray(data.assignedToIds);
+        const assignedVendorIds = this.normalizeIdArray(data.assignedVendorIds);
 
-        if (!assignedToIds.length) {
-            throw new Error("At least one assignee is required.");
+        if (!assignedToIds.length && !assignedVendorIds.length) {
+            throw new Error("At least one employee or vendor is required.");
         }
 
-        const validEmployees = await Employee.findAll({
+        const validUsers = await User.findAll({
             where: { id: assignedToIds },
             attributes: ["id"]
         });
-        if (validEmployees.length !== new Set(assignedToIds).size) {
-            const error = new Error("One or more assignees are not valid employees.");
+        if (validUsers.length !== new Set(assignedToIds).size) {
+            const error = new Error("One or more assignees are not valid users.");
+            error.status = 400;
+            throw error;
+        }
+        const validVendors = await Vendor.findAll({ where: { vendorId: assignedVendorIds }, attributes: ["vendorId"] });
+        if (validVendors.length !== new Set(assignedVendorIds).size) {
+            const error = new Error("One or more vendors are not valid.");
             error.status = 400;
             throw error;
         }
@@ -132,7 +186,14 @@ class ProjectOnboardService {
         const transaction = await sequelize.transaction();
 
         try {
-            await projectAssignmentRepository.clearByProjectOnboardId(id, transaction);
+            if (assignedToIds.length) {
+                await projectAssignmentRepository.clearByProjectOnboardId(id, transaction);
+            }
+
+            await ProjectOnboard.update(
+                { assignedVendorIds },
+                { where: { id }, transaction }
+            );
 
             await projectAssignmentRepository.bulkCreateAssignments(
                 assignedToIds.map((assignedToId) => ({
