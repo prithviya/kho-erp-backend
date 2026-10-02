@@ -22,8 +22,8 @@ exports.createProjectOnboard = asyncHandler(async (req, res) => {
     return ApiResponse.created(res, "Project onboarded successfully.", created);
 });
 
-exports.getProjectOnboards = asyncHandler(async (_req, res) => {
-    const projects = await projectOnboardService.listProjectOnboards();
+exports.getProjectOnboards = asyncHandler(async (req, res) => {
+    const projects = await projectOnboardService.listProjectOnboards(req.user);
     return ApiResponse.success(res, "Projects fetched successfully.", projects);
 });
 
@@ -58,10 +58,10 @@ exports.updateProjectOnboard = asyncHandler(async (req, res) => {
 });
 
 exports.assignProjectOnboard = asyncHandler(async (req, res) => {
-    const { assignedToIds } = req.body;
+    const { assignedToIds = [], assignedVendorIds = [] } = req.body;
 
-    if (!Array.isArray(assignedToIds) || assignedToIds.length === 0) {
-        return ApiResponse.error(res, "At least one assignee is required.", null, 400);
+    if ((!Array.isArray(assignedToIds) || assignedToIds.length === 0) && (!Array.isArray(assignedVendorIds) || assignedVendorIds.length === 0)) {
+        return ApiResponse.error(res, "At least one employee or vendor is required.", null, 400);
     }
     const updated = await projectOnboardService.assignProjectOnboard(req.params.id, req.body, req.user?.id);
     return ApiResponse.success(res, "Project assigned successfully.", updated);

@@ -44,6 +44,11 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: []
             },
+            assignedVendorIds: {
+                type: DataTypes.JSON,
+                allowNull: false,
+                defaultValue: []
+            },
             reportingHeadId: {
                 type: DataTypes.INTEGER,
                 allowNull: true

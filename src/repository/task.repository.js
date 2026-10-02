@@ -7,7 +7,16 @@ const TASK_INCLUDES = [
     {
         model: ProjectOnboard,
         as: "project",
-        attributes: ["id", "projectName", "companyName", "projectManagerIds", "spocIds"],
+        attributes: [
+            "id",
+            "projectName",
+            "companyName",
+            "projectManagerIds",
+            "spocIds",
+            "assignedToIds",
+            "reportingHeadId",
+            "serviceIds"
+        ],
         paranoid: false
     },
     {
