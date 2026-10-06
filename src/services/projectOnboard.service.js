@@ -1,4 +1,4 @@
-const { Lead, ProjectOnboard, User, Vendor, sequelize } = require("../model");
+const { Lead, ProjectOnboard, User, Vendor, Role, sequelize } = require("../model");
 const projectAssignmentRepository = require("../repository/projectAssignment.repository");
 const projectOnboardRepository = require("../repository/projectOnboard.repository");
 
@@ -63,7 +63,11 @@ class ProjectOnboardService {
             ...this.parseIdArray(project.assignedToIds),
             project.reportingHeadId
         ]).map(Number).filter(Number.isFinite))];
-        const users = ids.length ? await User.findAll({ where: { id: ids }, attributes: ["id", "firstName", "lastName", "email"] }) : [];
+        const users = ids.length ? await User.findAll({
+            where: { id: ids },
+            attributes: ["id", "firstName", "lastName", "email"],
+            include: [{ model: Role, as: "roles", attributes: ["code", "name"], through: { attributes: [] } }]
+        }) : [];
         const userMap = new Map(users.map((user) => [Number(user.id), user.toJSON()]));
         const vendorIds = [...new Set(records.flatMap((project) => this.parseIdArray(project.assignedVendorIds)).map(Number).filter(Number.isFinite))];
         const vendors = vendorIds.length ? await Vendor.findAll({ where: { vendorId: vendorIds } }) : [];

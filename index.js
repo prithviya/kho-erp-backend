@@ -21,7 +21,9 @@ if (process.env.NODE_ENV === "production") {
 app.use(helmet());
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        // origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        // origin: process.env.FRONTEND_URL || "https://will.khosocial.com",
+        origin: process.env.FRONTEND_URL || "https://staging.khosocial.com",
         credentials: true,
     })
 );

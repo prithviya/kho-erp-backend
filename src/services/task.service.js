@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { ProjectOnboard, User } = require("../model");
+const { ProjectOnboard, User, Vendor } = require("../model");
 const taskRepository = require("../repository/task.repository");
 const { normalizeRole } = require("../middleware/roleAccess.middleware");
 
@@ -117,6 +117,10 @@ class TaskService {
             const assignee = await User.findByPk(data.assignedToId);
             if (!assignee || !assignee.isActive) throw httpError("Assignee not found or inactive.", 404);
         }
+        if (data.assignedVendorId !== undefined) {
+            const vendor = await Vendor.findOne({ where: { vendorId: data.assignedVendorId } });
+            if (!vendor) throw httpError("Vendor not found.", 404);
+        }
 
         if (data.reportingHeadId) {
             const head = await User.findByPk(data.reportingHeadId);
@@ -132,6 +136,7 @@ class TaskService {
         if (data.title !== undefined) payload.title = String(data.title).trim();
         if (data.description !== undefined) payload.description = data.description ? String(data.description).trim() : null;
         if (data.assignedToId !== undefined) payload.assignedToId = Number(data.assignedToId);
+        if (data.assignedVendorId !== undefined) payload.assignedVendorId = Number(data.assignedVendorId);
         if (data.reportingHeadId !== undefined) payload.reportingHeadId = data.reportingHeadId ? Number(data.reportingHeadId) : null;
         if (data.priority !== undefined) {
             const priority = String(data.priority).toUpperCase();
@@ -147,7 +152,7 @@ class TaskService {
         const payload = this.normalizePayload(data);
         if (!payload.title) throw httpError("Task title is required.");
         if (!payload.projectOnboardId) throw httpError("Project is required.");
-        if (!payload.assignedToId) throw httpError("Assignee is required.");
+        if (!payload.assignedToId && !payload.assignedVendorId) throw httpError("Assignee is required.");
 
         const project = await ProjectOnboard.findByPk(payload.projectOnboardId);
         if (!project) throw httpError("Project not found.", 404);
@@ -168,8 +173,12 @@ class TaskService {
         }
 
         const assignedToIds = parseIds(project.assignedToIds);
-        if (assignedToIds.length && !assignedToIds.some((id) => Number(id) === Number(payload.assignedToId))) {
+        const assignedVendorIds = parseIds(project.assignedVendorIds);
+        if (payload.assignedToId && assignedToIds.length && !assignedToIds.some((id) => Number(id) === Number(payload.assignedToId))) {
             throw httpError("The selected assignee is not assigned to this project.", 403);
+        }
+        if (payload.assignedVendorId && assignedVendorIds.length && !assignedVendorIds.some((id) => Number(id) === Number(payload.assignedVendorId))) {
+            throw httpError("The selected vendor is not assigned to this project.", 403);
         }
 
         // A manager creating a task is the reporting head by default.
