@@ -103,6 +103,7 @@ db.Opening = require("./opening.model")( sequelize, DataTypes );
 db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes );
 db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes );
 db.Task = require("./task.model")( sequelize, DataTypes );
+db.ProjectChatMessage = require("./projectChatMessage.model")( sequelize, DataTypes );
 db.Employee = require("./employee.model")( sequelize, DataTypes );
 db.Payroll = require("./payroll.model")( sequelize, DataTypes );
 db.LeaveCategory = require("./leaveCategory.model")( sequelize, DataTypes );
@@ -331,6 +332,26 @@ db.Task.belongsTo(db.Service, {
 db.Task.belongsTo(db.User, {
     foreignKey: "assignedToId",
     as: "assignee",
+});
+
+db.ProjectChatMessage.belongsTo(db.ProjectOnboard, {
+    foreignKey: "projectOnboardId",
+    as: "project",
+});
+
+db.ProjectOnboard.hasMany(db.ProjectChatMessage, {
+    foreignKey: "projectOnboardId",
+    as: "chatMessages",
+});
+
+db.ProjectChatMessage.belongsTo(db.User, {
+    foreignKey: "senderId",
+    as: "sender",
+});
+
+db.User.hasMany(db.ProjectChatMessage, {
+    foreignKey: "senderId",
+    as: "projectChatMessages",
 });
 
 db.User.hasMany(db.Task, {
