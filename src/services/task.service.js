@@ -1,6 +1,8 @@
 const { Op } = require("sequelize");
-const { ProjectOnboard, User, Vendor } = require("../model");
+const { ProjectOnboard, ProjectAssignment, User, Vendor } = require("../model");
 const taskRepository = require("../repository/task.repository");
+const notificationService = require("./notification.service");
+const { emitToUser } = require("../realtime/socket");
 const { normalizeRole } = require("../middleware/roleAccess.middleware");
 
 const TASK_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
@@ -17,28 +19,62 @@ function isManager(actor) {
 }
 
 class TaskService {
+    async getAccessibleProjectIds(actor = {}) {
+        const me = Number(actor.id);
+        const projects = await ProjectOnboard.findAll({
+            attributes: ["id", "projectManagerIds", "spocIds", "assignedToIds", "reportingHeadId"]
+        });
+        const assignments = await ProjectAssignment.findAll({
+            where: {
+                [Op.or]: [{ assignedToId: me }, { reportingHeadId: me }]
+            },
+            attributes: ["projectOnboardId"]
+        });
+        const parseIds = (value) => {
+            if (Array.isArray(value)) return value;
+            if (typeof value !== "string") return value === null || value === undefined ? [] : [value];
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+            } catch {
+                return value.trim() ? [value] : [];
+            }
+        };
+        const projectIds = new Set(assignments.map((item) => Number(item.projectOnboardId)));
+        projects.forEach((project) => {
+            const memberIds = [
+                ...parseIds(project.projectManagerIds),
+                ...parseIds(project.spocIds),
+                ...parseIds(project.assignedToIds),
+                project.reportingHeadId
+            ];
+            if (memberIds.some((id) => Number(id) === me)) projectIds.add(Number(project.id));
+        });
+
+        return [...projectIds];
+    }
+
     /**
      * Visibility rules:
      *  - super admin: every task
-     *  - manager: tasks where they are the reporting head (plus ones they
-     *    created or were assigned)
-     *  - everyone else: only tasks assigned to them
+     *  - project members: every task in their projects
+     *  - everyone else: tasks they created, report, or are assigned to
      */
-    getVisibilityWhere(actor = {}) {
+    async getVisibilityWhere(actor = {}) {
         if (actor.isSuperAdmin) return {};
 
         const me = Number(actor.id);
-        if (isManager(actor)) {
-            return {
-                [Op.or]: [
-                    { reportingHeadId: me },
-                    { createdBy: me },
-                    { assignedToId: me }
-                ]
-            };
-        }
+        const projectIds = await this.getAccessibleProjectIds(actor);
 
-        return { assignedToId: me };
+        const visibility = [
+            { reportingHeadId: me },
+            { createdBy: me },
+            { assignedToId: me }
+        ];
+        if (projectIds.length) {
+            visibility.push({ projectOnboardId: { [Op.in]: projectIds } });
+        }
+        return { [Op.or]: visibility };
     }
 
     canManage(task, actor = {}) {
@@ -72,7 +108,7 @@ class TaskService {
     async listTasks(filters = {}, actor = {}) {
         const where = {
             ...this.buildFilters(filters),
-            ...this.getVisibilityWhere(actor)
+            ...(await this.getVisibilityWhere(actor))
         };
         return taskRepository.listTasks(where);
     }
@@ -81,10 +117,12 @@ class TaskService {
         const task = await taskRepository.findOneById(id);
         if (!task) throw httpError("Task not found.", 404);
 
+        const projectIds = actor.isSuperAdmin ? [] : await this.getAccessibleProjectIds(actor);
         const visible = actor.isSuperAdmin
             || Number(task.assignedToId) === Number(actor.id)
             || Number(task.reportingHeadId) === Number(actor.id)
-            || Number(task.createdBy) === Number(actor.id);
+            || Number(task.createdBy) === Number(actor.id)
+            || projectIds.includes(Number(task.projectOnboardId));
         if (!visible) throw httpError("You do not have access to this task.", 403);
 
         return task;
@@ -194,7 +232,10 @@ class TaskService {
             createdBy: actor.id || null
         });
 
-        return taskRepository.findOneById(created.id);
+        const saved = await taskRepository.findOneById(created.id);
+        const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "created" });
+        notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
+        return saved;
     }
 
     async updateTask(id, data, actor = {}) {
@@ -212,7 +253,10 @@ class TaskService {
         );
 
         await taskRepository.update(id, payload);
-        return taskRepository.findOneById(id);
+        const saved = await taskRepository.findOneById(id);
+        const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "updated" });
+        notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
+        return saved;
     }
 
     async updateStatus(id, status, actor = {}) {
@@ -229,7 +273,10 @@ class TaskService {
             completedAt: nextStatus === "COMPLETED" ? new Date() : null
         });
 
-        return taskRepository.findOneById(id);
+        const saved = await taskRepository.findOneById(id);
+        const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "changed status for" });
+        notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
+        return saved;
     }
 
     async deleteTask(id) {

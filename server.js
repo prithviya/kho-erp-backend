@@ -1,10 +1,14 @@
 require("dotenv").config();
 const app = require("./index");
+const http = require("http");
 const logger = require("./src/helpers/logger");
 const connectDatabase = require("./src/helpers/database.helper");
+const { initializeSocket } = require("./src/realtime/socket");
 const seedStaticData = require("./seed");
 const requestLogger = require("./src/middleware/requestLogger");
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+initializeSocket(server);
 app.use(requestLogger);
 (async () => {
     try {
@@ -16,7 +20,7 @@ app.use(requestLogger);
             logger.info("✅ Static seed data ensured");
         }
 
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             logger.info("================================");
             logger.info(`🚀 ERP API Running on Port ${PORT}`);
             logger.info(`🌍 Environment : ${process.env.NODE_ENV}`);

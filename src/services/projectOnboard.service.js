@@ -123,8 +123,9 @@ class ProjectOnboardService {
         const userId = Number(actor.id);
         return mapped.filter((project) => [
             ...this.parseIdArray(project.spocIds),
-            ...this.parseIdArray(project.assignedToIds)
-            , ...this.parseIdArray(project.assignedVendorIds)
+            ...this.parseIdArray(project.projectManagerIds),
+            ...this.parseIdArray(project.assignedToIds),
+            project.reportingHeadId
         ].some((id) => Number(id) === userId));
     }
 

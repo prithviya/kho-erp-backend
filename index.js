@@ -78,23 +78,16 @@ app.get("/", (req, res, next) => {
  */
 const buildPath = path.join(__dirname, "build");
 const uploadsPath = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "uploads"));
-if (fs.existsSync(uploadsPath)) {
-    app.use("/uploads", express.static(uploadsPath, {
-        setHeaders: (res, filePath) => {
-            const extension = path.extname(filePath).toLowerCase();
-            const downloadableExtensions = [
-                ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-                ".txt", ".csv", ".zip", ".rar", ".jpg", ".jpeg", ".png",
-                ".gif"
-            ];
-
-            if (downloadableExtensions.includes(extension)) {
-                const fileName = path.basename(filePath);
-                res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-            }
-        },
-    }));
-}
+if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
+app.use("/uploads", express.static(uploadsPath, {
+    setHeaders: (res) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader(
+            "Content-Security-Policy",
+            "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173;"
+        );
+    }
+}));
 const assetsPath = path.join(__dirname, "assets");
 if (fs.existsSync(assetsPath)) {
     app.use("/assets", express.static(assetsPath));
