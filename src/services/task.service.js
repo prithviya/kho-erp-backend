@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { ProjectOnboard, ProjectAssignment, User, Vendor } = require("../model");
+const { sequelize, Task, TaskActivity, ProjectOnboard, ProjectAssignment, User, Vendor } = require("../model");
 const taskRepository = require("../repository/task.repository");
 const notificationService = require("./notification.service");
 const { emitToUser } = require("../realtime/socket");
@@ -7,6 +7,12 @@ const { normalizeRole } = require("../middleware/roleAccess.middleware");
 
 const TASK_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
 const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH"];
+const TASK_STATUS_LABELS = {
+    TODO: "Open",
+    IN_PROGRESS: "In Progress",
+    REVIEW: "Review",
+    COMPLETED: "Completed"
+};
 
 function httpError(message, status = 400) {
     const error = new Error(message);
@@ -84,6 +90,14 @@ class TaskService {
         return Number(task.reportingHeadId) === me || Number(task.createdBy) === me;
     }
 
+    canEditTaskDetails(task, actor = {}) {
+        return Boolean(
+            actor.isSuperAdmin
+            || isManager(actor)
+            || Number(task.createdBy) === Number(actor.id)
+        );
+    }
+
     canChangeStatus(task, actor = {}) {
         if (this.canManage(task, actor)) return true;
         return Number(task.assignedToId) === Number(actor.id);
@@ -128,6 +142,15 @@ class TaskService {
         return task;
     }
 
+    async listActivities(id, actor = {}) {
+        await this.getTaskById(id, actor);
+        return TaskActivity.findAll({
+            where: { taskId: Number(id) },
+            include: [{ model: User, as: "actor", attributes: ["id", "firstName", "lastName"] }],
+            order: [["createdAt", "ASC"], ["id", "ASC"]]
+        });
+    }
+
     async validateRefs(data, { requireProject = true } = {}) {
         if (requireProject || data.projectOnboardId !== undefined) {
             const project = await ProjectOnboard.findByPk(data.projectOnboardId);
@@ -151,7 +174,7 @@ class TaskService {
             }
         }
 
-        if (data.assignedToId !== undefined) {
+        if (data.assignedToId !== undefined && data.assignedToId !== null) {
             const assignee = await User.findByPk(data.assignedToId);
             if (!assignee || !assignee.isActive) throw httpError("Assignee not found or inactive.", 404);
         }
@@ -173,7 +196,7 @@ class TaskService {
         if (data.serviceId !== undefined) payload.serviceId = data.serviceId ? Number(data.serviceId) : null;
         if (data.title !== undefined) payload.title = String(data.title).trim();
         if (data.description !== undefined) payload.description = data.description ? String(data.description).trim() : null;
-        if (data.assignedToId !== undefined) payload.assignedToId = Number(data.assignedToId);
+        if (data.assignedToId !== undefined) payload.assignedToId = data.assignedToId === null ? null : Number(data.assignedToId);
         if (data.assignedVendorId !== undefined) payload.assignedVendorId = Number(data.assignedVendorId);
         if (data.reportingHeadId !== undefined) payload.reportingHeadId = data.reportingHeadId ? Number(data.reportingHeadId) : null;
         if (data.priority !== undefined) {
@@ -182,6 +205,7 @@ class TaskService {
             payload.priority = priority;
         }
         if (data.dueDate !== undefined) payload.dueDate = data.dueDate || null;
+        if (data.reminderAt !== undefined) payload.reminderAt = data.reminderAt || null;
 
         return payload;
     }
@@ -240,8 +264,13 @@ class TaskService {
 
     async updateTask(id, data, actor = {}) {
         const task = await this.getTaskById(id, actor);
-        if (!this.canManage(task, actor)) {
-            throw httpError("Only the reporting manager or a super admin can edit this task.", 403);
+        const metadataFields = new Set(["dueDate", "priority", "reminderAt"]);
+        const isMetadataOnlyUpdate = Object.keys(data).length > 0
+            && Object.keys(data).every((field) => metadataFields.has(field));
+        const canEditMetadata = isMetadataOnlyUpdate
+            && this.canEditTaskDetails(task, actor);
+        if (!canEditMetadata && !this.canManage(task, actor)) {
+            throw httpError("You cannot edit this task.", 403);
         }
 
         const payload = this.normalizePayload(data);
@@ -252,8 +281,80 @@ class TaskService {
             { requireProject: payload.projectOnboardId !== undefined || payload.serviceId !== undefined }
         );
 
-        await taskRepository.update(id, payload);
+        const assignmentChanged = payload.assignedToId !== undefined
+            && (payload.assignedToId === null
+                ? task.assignedToId !== null
+                : Number(payload.assignedToId) !== Number(task.assignedToId));
+        const changedFields = [];
+        if (payload.dueDate !== undefined && String(payload.dueDate || "") !== String(task.dueDate || "")) {
+            changedFields.push({
+                action: "DUE_DATE_CHANGED",
+                previousValue: task.dueDate || "Not set",
+                newValue: payload.dueDate || "Not set"
+            });
+        }
+        if (payload.priority !== undefined && payload.priority !== task.priority) {
+            changedFields.push({
+                action: "PRIORITY_CHANGED",
+                previousValue: task.priority || "Not set",
+                newValue: payload.priority || "Not set"
+            });
+        }
+        if (payload.reminderAt !== undefined
+            && new Date(payload.reminderAt || 0).getTime() !== new Date(task.reminderAt || 0).getTime()) {
+            changedFields.push({
+                action: "REMINDER_CHANGED",
+                previousValue: task.reminderAt ? new Date(task.reminderAt).toISOString() : "Not set",
+                newValue: payload.reminderAt ? new Date(payload.reminderAt).toISOString() : "Not set"
+            });
+        }
+        const removedAssigneeName = task.assignee
+            ? `${task.assignee.firstName || ""} ${task.assignee.lastName || ""}`.trim()
+            : "Unassigned";
+        let newAssigneeName = null;
+        if (assignmentChanged) {
+            if (payload.assignedToId === null) {
+                newAssigneeName = removedAssigneeName;
+            } else {
+                const assignee = await User.findByPk(payload.assignedToId, { attributes: ["firstName", "lastName"] });
+                newAssigneeName = assignee
+                    ? `${assignee.firstName || ""} ${assignee.lastName || ""}`.trim()
+                    : "Unknown user";
+            }
+        }
+        let actorName;
+        if (assignmentChanged || changedFields.length) {
+            const actorRecord = await User.findByPk(actor.id, { attributes: ["firstName", "lastName", "email"] });
+            actorName = actorRecord
+                ? `${actorRecord.firstName || ""} ${actorRecord.lastName || ""}`.trim() || actorRecord.email
+                : actor.email || "Unknown user";
+        }
+
+        const activities = await sequelize.transaction(async (transaction) => {
+            await Task.update(payload, { where: { id }, transaction });
+            const createdActivities = [];
+            if (assignmentChanged) {
+                createdActivities.push(await TaskActivity.create({
+                    taskId: Number(id),
+                    actorId: actor.id || null,
+                    actorName,
+                    action: payload.assignedToId === null ? "ASSIGNEE_REMOVED" : "ASSIGNED",
+                    previousValue: removedAssigneeName,
+                    newValue: newAssigneeName
+                }, { transaction }));
+            }
+            for (const field of changedFields) {
+                createdActivities.push(await TaskActivity.create({
+                    taskId: Number(id),
+                    actorId: actor.id || null,
+                    actorName,
+                    ...field
+                }, { transaction }));
+            }
+            return createdActivities;
+        });
         const saved = await taskRepository.findOneById(id);
+        activities.forEach((activity) => emitTaskActivity(saved, activity));
         const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "updated" });
         notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
         return saved;
@@ -268,12 +369,30 @@ class TaskService {
         const nextStatus = String(status || "").toUpperCase();
         if (!TASK_STATUSES.includes(nextStatus)) throw httpError("Invalid status.");
 
-        await taskRepository.update(id, {
-            status: nextStatus,
-            completedAt: nextStatus === "COMPLETED" ? new Date() : null
+        const previousStatus = String(task.status || "TODO").toUpperCase();
+        if (previousStatus === nextStatus) return task;
+        const actorRecord = await User.findByPk(actor.id, { attributes: ["firstName", "lastName", "email"] });
+        const actorName = actorRecord
+            ? `${actorRecord.firstName || ""} ${actorRecord.lastName || ""}`.trim() || actorRecord.email
+            : actor.email || "Unknown user";
+
+        const activity = await sequelize.transaction(async (transaction) => {
+            await Task.update({
+                status: nextStatus,
+                completedAt: nextStatus === "COMPLETED" ? new Date() : null
+            }, { where: { id }, transaction });
+            return TaskActivity.create({
+                taskId: Number(id),
+                actorId: actor.id || null,
+                actorName,
+                action: "STATUS_CHANGED",
+                previousValue: TASK_STATUS_LABELS[previousStatus] || previousStatus,
+                newValue: TASK_STATUS_LABELS[nextStatus]
+            }, { transaction });
         });
 
         const saved = await taskRepository.findOneById(id);
+        emitTaskActivity(saved, activity);
         const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "changed status for" });
         notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
         return saved;
@@ -285,6 +404,35 @@ class TaskService {
         await taskRepository.delete(id);
         return true;
     }
+}
+
+function emitTaskActivity(task, activity) {
+    if (!task || !activity) return;
+    const parseIds = (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value !== "string") return value === undefined || value === null ? [] : [value];
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+        } catch {
+            return value.trim() ? [value] : [];
+        }
+    };
+    const project = task.project || {};
+    const userIds = new Set([
+        task.assignedToId,
+        task.reportingHeadId,
+        task.createdBy,
+        activity.actorId,
+        project.reportingHeadId,
+        ...parseIds(project.projectManagerIds),
+        ...parseIds(project.spocIds),
+        ...parseIds(project.assignedToIds)
+    ].map(Number).filter((id) => Number.isFinite(id) && id > 0));
+    userIds.forEach((userId) => emitToUser(userId, "task-activity", {
+        taskId: Number(task.id),
+        activity: activity.toJSON()
+    }));
 }
 
 module.exports = new TaskService();

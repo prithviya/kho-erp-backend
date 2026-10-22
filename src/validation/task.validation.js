@@ -28,6 +28,10 @@ const baseTaskValidation = [
         .optional({ nullable: true })
         .isISO8601()
         .withMessage("dueDate must be a valid date (YYYY-MM-DD)."),
+    body("reminderAt")
+        .optional({ nullable: true })
+        .isISO8601()
+        .withMessage("reminderAt must be a valid date and time."),
 ];
 
 const createTaskValidation = [
@@ -41,7 +45,7 @@ const updateTaskValidation = [
     ...taskIdParamValidation,
     body("projectOnboardId").optional().isInt({ min: 1 }).withMessage("projectOnboardId must be a positive integer."),
     body("title").optional().trim().notEmpty().withMessage("title cannot be empty.").isLength({ max: 200 }),
-    body("assignedToId").optional().isInt({ min: 1 }).withMessage("assignedToId must be a positive integer."),
+    body("assignedToId").optional({ nullable: true }).isInt({ min: 1 }).withMessage("assignedToId must be a positive integer."),
     ...baseTaskValidation,
 ];
 

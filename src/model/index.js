@@ -103,6 +103,7 @@ db.Opening = require("./opening.model")( sequelize, DataTypes );
 db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes );
 db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes );
 db.Task = require("./task.model")( sequelize, DataTypes );
+db.TaskActivity = require("./taskActivity.model")( sequelize, DataTypes );
 db.TaskChatMessage = require("./taskChatMessage.model")( sequelize, DataTypes );
 db.ProjectChatMessage = require("./projectChatMessage.model")( sequelize, DataTypes );
 db.Notification = require("./notification.model")( sequelize, DataTypes );
@@ -324,6 +325,26 @@ db.Task.belongsTo(db.ProjectOnboard, {
 db.ProjectOnboard.hasMany(db.Task, {
     foreignKey: "projectOnboardId",
     as: "tasks",
+});
+
+db.Task.hasMany(db.TaskActivity, {
+    foreignKey: "taskId",
+    as: "activities",
+});
+
+db.TaskActivity.belongsTo(db.Task, {
+    foreignKey: "taskId",
+    as: "task",
+});
+
+db.TaskActivity.belongsTo(db.User, {
+    foreignKey: "actorId",
+    as: "actor",
+});
+
+db.User.hasMany(db.TaskActivity, {
+    foreignKey: "actorId",
+    as: "taskActivities",
 });
 
 db.Task.belongsTo(db.Service, {

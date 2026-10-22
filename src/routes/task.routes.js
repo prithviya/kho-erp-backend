@@ -15,10 +15,11 @@ const {
 // Listing is open to every logged-in user; the service scopes results by role.
 router.get("/", authMiddleware, controller.getTasks);
 router.get("/:id", authMiddleware, taskIdParamValidation, validate, controller.getTaskById);
+router.get("/:id/activities", authMiddleware, taskIdParamValidation, validate, controller.getTaskActivities);
 
 // Only managers (and super admins) allocate work.
 router.post("/", authMiddleware, requireAnyRole(["manager", "team_member"]), createTaskValidation, validate, controller.createTask);
-router.put("/:id", authMiddleware, requireAnyRole(["manager"]), updateTaskValidation, validate, controller.updateTask);
+router.put("/:id", authMiddleware, updateTaskValidation, validate, controller.updateTask);
 
 // Assignee, reporting head, or super admin may move a task along.
 router.patch("/:id/status", authMiddleware, updateTaskStatusValidation, validate, controller.updateTaskStatus);

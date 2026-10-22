@@ -49,6 +49,10 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.DATEONLY,
                 allowNull: true
             },
+            reminderAt: {
+                type: DataTypes.DATE,
+                allowNull: true
+            },
             completedAt: {
                 type: DataTypes.DATE,
                 allowNull: true

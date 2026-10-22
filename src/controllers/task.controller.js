@@ -12,6 +12,11 @@ exports.getTaskById = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, "Task fetched successfully.", task);
 });
 
+exports.getTaskActivities = asyncHandler(async (req, res) => {
+    const activities = await taskService.listActivities(req.params.id, req.user);
+    return ApiResponse.success(res, "Task activities fetched successfully.", activities);
+});
+
 exports.createTask = asyncHandler(async (req, res) => {
     const task = await taskService.createTask(req.body || {}, req.user);
     return ApiResponse.created(res, "Task created successfully.", task);
