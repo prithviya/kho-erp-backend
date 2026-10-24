@@ -16,6 +16,7 @@ router.post("/categories", authMiddleware, requireAnyRole(["hr"]), controller.cr
 router.put("/categories/:id", authMiddleware, requireAnyRole(["hr"]), controller.updateCategory);
 
 router.get("/summary", authMiddleware, controller.getSummary);
+router.get("/calendar", authMiddleware, controller.getCalendar);
 
 router.get("/requests", authMiddleware, controller.getRequests);
 router.get("/requests/:id", authMiddleware, controller.getRequestById);

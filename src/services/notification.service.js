@@ -35,6 +35,17 @@ class NotificationService {
         );
     }
 
+    async deleteForUser(id, userId) {
+        const deletedCount = await Notification.destroy({
+            where: { id: Number(id), userId: Number(userId) }
+        });
+        if (!deletedCount) {
+            const error = new Error("Notification not found.");
+            error.status = 404;
+            throw error;
+        }
+    }
+
     async createMentionNotifications({ userIds, projectOnboardId, message, sender }) {
         const uniqueIds = [...new Set(userIds.map(Number).filter((id) => id && id !== Number(sender.id)))];
         if (!uniqueIds.length) return [];

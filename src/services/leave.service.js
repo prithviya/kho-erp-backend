@@ -294,7 +294,7 @@ class LeaveService {
     }
 
     async ensureBalanceAvailable({ category, userId, fromDate, toDate, requestedDays, requestedHours, excludeRequestId = null }) {
-        if (category.code === "LEAVE_WITHOUT_PAY") {
+        if (["LEAVE_WITHOUT_PAY", "ON_THE_DUTY"].includes(category.code)) {
             return;
         }
 
@@ -475,6 +475,82 @@ class LeaveService {
         });
     }
 
+    async listCalendarRequests(year, month) {
+        const calendarYear = Number(year);
+        const calendarMonth = Number(month);
+        if (
+            !Number.isInteger(calendarYear)
+            || calendarYear < 1900
+            || calendarYear > 9999
+            || !Number.isInteger(calendarMonth)
+            || calendarMonth < 1
+            || calendarMonth > 12
+        ) {
+            const error = new Error("A valid calendar year and month are required.");
+            error.status = 400;
+            throw error;
+        }
+
+        const monthStart = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}-01`;
+        const monthEnd = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}-${String(
+            new Date(Date.UTC(calendarYear, calendarMonth, 0)).getUTCDate()
+        ).padStart(2, "0")}`;
+
+        const requests = await db.LeaveRequest.findAll({
+            where: {
+                fromDate: { [Op.lte]: monthEnd },
+                toDate: { [Op.gte]: monthStart },
+                status: { [Op.in]: ["PENDING", "APPROVED"] },
+            },
+            attributes: [
+                "id",
+                "employeeName",
+                "clientName",
+                "fromDate",
+                "toDate",
+                "durationType",
+                "session",
+                "quarterSlot",
+                "status",
+            ],
+            include: [
+                {
+                    model: db.LeaveCategory,
+                    as: "category",
+                    attributes: ["code", "name"],
+                },
+                {
+                    model: db.User,
+                    as: "requester",
+                    attributes: ["firstName", "lastName"],
+                },
+            ],
+            order: [["fromDate", "ASC"], ["createdAt", "ASC"]],
+        });
+
+        return requests.map((request) => {
+            const data = request.toJSON();
+            const requesterName = [data.requester?.firstName, data.requester?.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+
+            return {
+                id: data.id,
+                employeeName: data.employeeName || requesterName || "Employee",
+                categoryName: data.category?.name || "Leave",
+                categoryCode: data.category?.code || null,
+                clientName: data.category?.code === "ON_THE_DUTY" ? data.clientName : null,
+                fromDate: data.fromDate,
+                toDate: data.toDate,
+                durationType: data.durationType,
+                session: data.session,
+                quarterSlot: data.quarterSlot,
+                status: data.status,
+            };
+        });
+    }
+
     async getRequestById(id, actor = {}) {
         const request = await db.LeaveRequest.findByPk(id, {
             include: [
@@ -642,6 +718,13 @@ class LeaveService {
             throw new Error("Leave category not found.");
         }
 
+        const clientName = String(payload.clientName || "").trim();
+        if (category.code === "ON_THE_DUTY" && !clientName) {
+            const error = new Error("Client name is required for On The Duty leave.");
+            error.status = 400;
+            throw error;
+        }
+
         const requesterId = isApprover(actor) && payload.userId
             ? Number(payload.userId)
             : Number(actor.id);
@@ -669,6 +752,7 @@ class LeaveService {
             userId: requesterId,
             employeeCode: requester.employeeRecord || null,
             employeeName: `${requester.firstName || ""} ${requester.lastName || ""}`.trim() || requester.email,
+            clientName: finalCategory.code === "ON_THE_DUTY" ? clientName : null,
             categoryId: finalCategory.id,
             fromDate: adjustedCalculated.fromDate,
             toDate: adjustedCalculated.toDate,
@@ -717,6 +801,15 @@ class LeaveService {
             throw new Error("Leave category not found.");
         }
 
+        const clientName = payload.clientName === undefined
+            ? String(request.clientName || "").trim()
+            : String(payload.clientName || "").trim();
+        if (category.code === "ON_THE_DUTY" && !clientName) {
+            const error = new Error("Client name is required for On The Duty leave.");
+            error.status = 400;
+            throw error;
+        }
+
         const calculated = await this.computeAmount(category, {
             fromDate: payload.fromDate || request.fromDate,
             toDate: payload.toDate || request.toDate,
@@ -747,6 +840,7 @@ class LeaveService {
             endTime: payload.endTime !== undefined ? payload.endTime : request.endTime,
             requestedDays: adjustedCalculated.requestedDays,
             requestedHours: adjustedCalculated.requestedHours,
+            clientName: finalCategory.code === "ON_THE_DUTY" ? clientName : null,
             reason: payload.reason !== undefined ? payload.reason : request.reason,
         });
 
@@ -863,8 +957,8 @@ class LeaveService {
                 } else {
                     allocated = 0;
                 }
-            } else if (category.code === "LEAVE_WITHOUT_PAY") {
-                allocated = 0; // or Infinity, but let's keep 0 as no limit
+            } else if (["LEAVE_WITHOUT_PAY", "ON_THE_DUTY"].includes(category.code)) {
+                allocated = 0;
             }
 
             byCategory.set(category.id, {
@@ -872,6 +966,7 @@ class LeaveService {
                 code: category.code,
                 name: category.name,
                 unit: category.unit,
+                unlimited: ["LEAVE_WITHOUT_PAY", "ON_THE_DUTY"].includes(category.code),
                 allocated,
                 booked: 0,
                 taken: 0,
@@ -903,7 +998,9 @@ class LeaveService {
             if (request.status === "PENDING") {
                 entry.pending += amount;
             }
-            entry.available = Number((entry.allocated - entry.booked).toFixed(2));
+            if (!entry.unlimited) {
+                entry.available = Number((entry.allocated - entry.booked).toFixed(2));
+            }
         });
 
         const list = [...byCategory.values()];

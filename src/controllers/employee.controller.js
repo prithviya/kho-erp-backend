@@ -12,6 +12,11 @@ exports.getEmployees = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, "Employees fetched successfully.", employees);
 });
 
+exports.getMyProfile = asyncHandler(async (req, res) => {
+    const employee = await employeeService.getEmployeeProfile(req.user);
+    return ApiResponse.success(res, "Employee profile fetched successfully.", employee);
+});
+
 exports.getEmployeeById = asyncHandler(async (req, res) => {
     const employee = await employeeService.getEmployeeById(req.params.id);
     return ApiResponse.success(res, "Employee fetched successfully.", employee);

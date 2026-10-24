@@ -5,6 +5,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 router.use(authMiddleware);
 router.get("/", controller.list);
 router.patch("/read-all", controller.markAllRead);
+router.delete("/:id", controller.remove);
 router.patch("/:id/read", controller.markRead);
 
 module.exports = router;

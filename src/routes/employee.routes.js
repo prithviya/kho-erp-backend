@@ -29,6 +29,7 @@ const upload = multer({
     }
 });
 
+router.get("/me/profile", authMiddleware, controller.getMyProfile);
 router.get("/", authMiddleware, requireAnyRole(["hr", "manager"]), controller.getEmployees);
 router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getEmployeeById);
 router.post("/", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.createEmployee);

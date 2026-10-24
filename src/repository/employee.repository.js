@@ -19,6 +19,15 @@ class EmployeeRepository extends BaseRepository {
         return this.model.findOne({ where: { employeeCode }, paranoid: false });
     }
 
+    async findForUser({ email, employeeCode }) {
+        if (employeeCode) {
+            const employee = await this.model.findOne({ where: { employeeCode } });
+            if (employee) return employee;
+        }
+
+        return email ? this.model.findOne({ where: { email } }) : null;
+    }
+
     async getEmployees(search = "") {
         const where = search
             ? {

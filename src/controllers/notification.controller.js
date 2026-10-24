@@ -17,3 +17,8 @@ exports.markAllRead = asyncHandler(async (req, res) => {
     await notificationService.markAllRead(req.user.id);
     return ApiResponse.success(res, "Notifications marked as read.");
 });
+
+exports.remove = asyncHandler(async (req, res) => {
+    await notificationService.deleteForUser(req.params.id, req.user.id);
+    return ApiResponse.success(res, "Notification cleared.");
+});

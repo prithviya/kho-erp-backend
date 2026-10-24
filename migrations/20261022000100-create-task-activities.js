@@ -2,6 +2,13 @@
 
 module.exports = {
     async up(queryInterface, Sequelize) {
+        const tables = await queryInterface.showAllTables();
+        const hasTable = tables.some((table) => (
+            String(typeof table === "object" ? table.tableName || table.name : table)
+                .toLowerCase() === "task_activities"
+        ));
+        if (hasTable) return;
+
         await queryInterface.createTable("task_activities", {
             id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
             taskId: {

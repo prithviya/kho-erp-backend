@@ -21,9 +21,9 @@ if (process.env.NODE_ENV === "production") {
 app.use(helmet());
 app.use(
     cors({
-        // origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        origin: process.env.FRONTEND_URL || "http://localhost:5173",
         // origin: process.env.FRONTEND_URL || "https://will.khosocial.com",
-        origin: process.env.FRONTEND_URL || "https://staging.khosocial.com",
+        //origin: process.env.FRONTEND_URL || "https://staging.khosocial.com",
         credentials: true,
     })
 );
@@ -32,8 +32,14 @@ app.use(morgan("dev"));
  * Body Parser
  */
 const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || "25mb";
+const onboardingBodyLimit = process.env.ONBOARDING_BODY_LIMIT || "50mb";
 app.use(cookieParser());
-app.use(express.json({ limit: requestBodyLimit }));
+app.use((req, res, next) => {
+    const isOnboardingRecordRequest = req.path.startsWith("/api/onboardings/record");
+    express.json({
+        limit: isOnboardingRecordRequest ? onboardingBodyLimit : requestBodyLimit,
+    })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: requestBodyLimit }));
 /**
  * Rate Limiter

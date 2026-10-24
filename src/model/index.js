@@ -495,7 +495,6 @@ db.LeaveRequest.belongsTo(db.User, {
     as: "designatedApprover",
 });
 
-
 db.Opening.belongsTo(db.Department, {
     foreignKey: "departmentId",
     targetKey: "id",

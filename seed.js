@@ -233,8 +233,8 @@ async function seedLeadServices() {
 }
 
 async function seedDefaultAdminUser() {
-    const adminEmail = "admin@gmail.com";
-    const adminPassword = "admin";
+    const adminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@gmail.com";
+    const adminPassword = process.env.SUPER_ADMIN_INITIAL_PASSWORD;
 
     try {
         const role = await db.Role.findOne({ where: { code: "SUPER_ADMIN" } });
@@ -243,10 +243,15 @@ async function seedDefaultAdminUser() {
             return;
         }
 
-        const passwordHash = await bcrypt.hash(adminPassword, 10);
         let user = await db.User.findOne({ where: { email: adminEmail } });
 
         if (!user) {
+            if (!adminPassword) {
+                logger.warn("[seed] SUPER_ADMIN_INITIAL_PASSWORD is not set; skipping default admin user creation");
+                return;
+            }
+
+            const passwordHash = await bcrypt.hash(adminPassword, 10);
             user = await db.User.create({
                 firstName: "Superadmin",
                 lastName: "Admin",
@@ -256,17 +261,9 @@ async function seedDefaultAdminUser() {
                 password: passwordHash,
                 isActive: true,
             });
-            logger.info("[seed] default admin user created: admin@gmail.com");
+            logger.info(`[seed] initial super admin user created: ${adminEmail}`);
         } else {
-            await user.update({
-                firstName: "Superadmin",
-                lastName: "Admin",
-                username: "admin",
-                phone: "0000000000",
-                password: passwordHash,
-                isActive: true,
-            });
-            logger.info("[seed] default admin user normalized: admin@gmail.com");
+            logger.info(`[seed] existing super admin user preserved: ${adminEmail}`);
         }
 
         const alreadyAssigned = await db.UserRole.findOne({

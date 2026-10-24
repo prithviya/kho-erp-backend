@@ -1,30 +1,48 @@
-const { User, Role, Permission, RefreshToken, Module } = require("../model");
+const { User, Employee, Role, Permission, RefreshToken, Module } = require("../model");
 const { Op } = require("sequelize");
 class AuthRepository {
     async login(identifier) {
-        return await User.findOne({
+        const userIncludes = [
+            {
+                model: Role,
+                as: "roles",
+                through: {
+                    attributes: []
+                },
+                include: [
+                    {
+                        model: Permission,
+                        as: "permissions",
+                        through: {
+                            attributes: []
+                        }
+                    }
+                ]
+            }
+        ];
+        const user = await User.findOne({
             where: {
-                [Op.or]: [{ email: identifier }, { username: identifier }]
+                [Op.or]: [
+                    { email: identifier },
+                    { username: identifier },
+                    { employeeRecord: identifier },
+                ]
             },
             paranoid: false,
-            include: [
-                {
-                    model: Role,
-                    as: "roles",
-                    through: {
-                        attributes: []
-                    },
-                    include: [
-                        {
-                            model: Permission,
-                            as: "permissions",
-                            through: {
-                                attributes: []
-                            }
-                        }
-                    ]
-                }
-            ]
+            include: userIncludes,
+        });
+        if (user) return user;
+
+        const employee = await Employee.findOne({
+            where: { employeeCode: identifier },
+            attributes: ["email"],
+        });
+        if (!employee?.email) return null;
+
+        return User.findOne({
+            where: { email: employee.email },
+            paranoid: false,
+            include: userIncludes,
         });
     }
     async findRefreshToken(token) {

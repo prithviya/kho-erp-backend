@@ -54,7 +54,7 @@ class AuthService {
     }
     // Login a user and generate tokens
     async login(data, sessionInfo) {
-        const identifier = String(data.email || "").trim();
+        const identifier = String(data.identifier || data.employeeCode || data.email || "").trim();
         logger.info(`Attempting login for identifier: ${identifier}`);
         const user = await authRepository.login(identifier);
         if (!user || !user.isActive || user.deletedAt) {
