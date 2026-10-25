@@ -4,7 +4,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 const { requireAnyRole, requireDeleteAccess } = require("../middleware/roleAccess.middleware");
 
 router.get("/", authMiddleware, requireAnyRole(["super_admin"]), controller.getUsers);
-router.get("/directory", authMiddleware, requireAnyRole(["manager"]), controller.getDirectory);
+router.get("/directory", authMiddleware, requireAnyRole(["manager", "hr"]), controller.getDirectory);
 router.post("/", authMiddleware, requireAnyRole(["super_admin"]), controller.createUser);
 router.put("/:id", authMiddleware, requireAnyRole(["super_admin"]), controller.updateUser);
 router.patch("/:id/status", authMiddleware, requireAnyRole(["super_admin"]), controller.updateUserStatus);

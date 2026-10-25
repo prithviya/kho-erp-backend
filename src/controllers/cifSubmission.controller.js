@@ -75,6 +75,10 @@ exports.create = asyncHandler(async (req, res) => {
     return ApiResponse.error(res, "Invalid JSON data in form fields", null, 400);
   }
 
+  // DOB is optional on the form; an empty string fails MySQL's DATEONLY parsing.
+  if (personal && !personal.DOB) personal.DOB = null;
+  if (personal && !personal.dob) personal.dob = null;
+
   if (personal?.pinCode && !/^\d{6}$/.test(String(personal.pinCode).trim())) {
     return ApiResponse.error(res, "PIN code must contain exactly 6 digits.", null, 400);
   }
