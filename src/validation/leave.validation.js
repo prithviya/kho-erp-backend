@@ -55,6 +55,15 @@ const baseLeaveRequestValidation = [
         .isLength({ max: 1000 })
         .withMessage("reason must not exceed 1000 characters."),
 
+    body("clientName")
+        .optional({ nullable: true })
+        .isString()
+        .withMessage("clientName must be a string.")
+        .bail()
+        .trim()
+        .isLength({ max: 200 })
+        .withMessage("clientName must not exceed 200 characters."),
+
     body().custom((payload) => {
         const fromDate = payload?.fromDate;
         const toDate = payload?.toDate;

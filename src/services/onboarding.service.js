@@ -448,10 +448,19 @@ class OnboardingService extends BaseService {
             ["sourceOfHire", "Employment Information: sourceOfHire"],
             ["department", "Employment Information: department"],
             ["designation", "Employment Information: designation"],
-            ["reportingHead", "Employment Information: reportingHead"],
             ["panNumber", "Employment Information: panNumber"],
             ["currentSalary", "Employment Information: currentSalary"],
         ];
+        const normalizedDesignation = String(formData.designation || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[\s_-]+/g, "");
+        if (normalizedDesignation !== "managingdirector") {
+            requiredEmploymentFields.push([
+                "reportingHead",
+                "Employment Information: reportingHead",
+            ]);
+        }
 
         requiredEmploymentFields.forEach(([key, label]) => {
             if (!this.hasText(formData[key])) {

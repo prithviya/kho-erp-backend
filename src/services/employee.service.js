@@ -85,6 +85,15 @@ class EmployeeService {
         return employees.map((employee) => this.toResponse(employee));
     }
 
+    async getEmployeeProfile(user) {
+        const employee = await repository.findForUser({
+            email: this.normalizeString(user?.email).toLowerCase(),
+            employeeCode: this.normalizeString(user?.employeeRecord),
+        });
+
+        return employee ? this.toResponse(employee) : null;
+    }
+
     async getEmployeeById(id) {
         const employee = await repository.getEmployeeById(id);
         if (!employee) throw new Error("Employee not found.");

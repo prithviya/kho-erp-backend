@@ -53,6 +53,7 @@ const authenticate = async (req, res, next) => {
             id: user.id,
             email: user.email,
             firstName: user.firstName,
+            employeeRecord: user.employeeRecord,
             roles: user.roles || [],
             roleSet,
             isSuperAdmin: roleSet.has("superadmin"),

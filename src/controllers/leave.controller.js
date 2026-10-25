@@ -26,6 +26,13 @@ exports.getSummary = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, "Leave summary fetched successfully.", summary);
 });
 
+exports.getCalendar = asyncHandler(async (req, res) => {
+    const year = req.query.year || new Date().getFullYear();
+    const month = req.query.month || new Date().getMonth() + 1;
+    const requests = await leaveService.listCalendarRequests(year, month);
+    return ApiResponse.success(res, "Leave calendar fetched successfully.", requests);
+});
+
 exports.getRequests = asyncHandler(async (req, res) => {
     const requests = await leaveService.listRequests(req.query || {}, req.user);
     return ApiResponse.success(res, "Leave requests fetched successfully.", requests);
