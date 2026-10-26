@@ -339,6 +339,16 @@ class OnboardingService extends BaseService {
         return fallback;
     }
 
+    // Saved records can have a blank country code even when a valid phone
+    // number is present (the frontend's phone widget falls back to +91 for
+    // display without always persisting it) -- resolve the same default here
+    // so final-submit validation agrees with what the UI actually shows.
+    getEffectivePhoneCountryCode(countryCode) {
+        const code = String(countryCode || "").trim();
+        if (!code) return "+91";
+        return code.startsWith("+") ? code : `+${code}`;
+    }
+
     buildSnapshotFormData(formData) {
         if (!formData || typeof formData !== "object") {
             return {};
@@ -415,7 +425,6 @@ class OnboardingService extends BaseService {
             ["employeeId", "Basic Details: employeeId"],
             ["personalEmail", "Basic Details: personalEmail"],
             ["personalPhone", "Basic Details: personalPhone"],
-            ["officialEmail", "Basic Details: officialEmail"],
             ["gender", "Basic Details: gender"],
             ["maritalStatus", "Basic Details: maritalStatus"],
             ["dateOfBirth", "Basic Details: dateOfBirth"],
@@ -434,7 +443,7 @@ class OnboardingService extends BaseService {
 
         const validatePhone = (phoneKey, countryCodeKey, label, required = false) => {
             const phone = String(formData[phoneKey] || "").trim();
-            const countryCode = String(formData[countryCodeKey] || "").trim();
+            const countryCode = this.getEffectivePhoneCountryCode(formData[countryCodeKey]);
 
             if (!phone && !required) return;
             if (!phone) {
@@ -454,7 +463,7 @@ class OnboardingService extends BaseService {
 
         const health = formData.health || {};
         const emergencyNumber = String(health.emergencyNumber || "").trim();
-        const emergencyCountryCode = String(health.emergencyPhoneCountryCode || "").trim();
+        const emergencyCountryCode = this.getEffectivePhoneCountryCode(health.emergencyPhoneCountryCode);
         if (!/^\d{10}$/.test(emergencyNumber)) {
             errors.push("Health: emergencyNumber");
         }
@@ -1791,8 +1800,14 @@ class OnboardingService extends BaseService {
                 "",
             nickName: onboardingInfo?.nickName || existingData.nickName || "",
             employeeId: onboardingInfo?.employeeId || existingData.employeeId || "",
+            // officialEmail is optional and the saved draft is the source of truth
+            // once it exists -- onboardingInfo.officialemail always gets a
+            // synthesized fallback value on save (see buildOnboardingInfoPayload),
+            // so it must never override an explicit (including empty) draft value.
             officialEmail:
-                onboardingInfo?.officialemail || existingData.officialEmail || "",
+                existingData.officialEmail !== undefined
+                    ? existingData.officialEmail
+                    : onboardingInfo?.officialemail || "",
             personalEmail:
                 onboardingInfo?.personalEmail ||
                 existingData.personalEmail ||
