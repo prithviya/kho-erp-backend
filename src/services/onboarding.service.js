@@ -319,6 +319,26 @@ class OnboardingService extends BaseService {
         return uniqueDocuments;
     }
 
+    // The formData/experienceDetails/educationDetails columns are legacy LONGTEXT
+    // (not native MySQL JSON), so Sequelize's JSON type does not reliably
+    // auto-parse them on every fresh read -- callers can get back either the
+    // parsed object or the raw JSON string depending on the query path.
+    // Always route reads through this so a string never gets object-spread
+    // (spreading a string produces one numeric key per character).
+    parseJsonColumn(value, fallback = {}) {
+        if (value && typeof value === "object") {
+            return value;
+        }
+        if (typeof value === "string" && value.trim()) {
+            try {
+                return JSON.parse(value);
+            } catch {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
     buildSnapshotFormData(formData) {
         if (!formData || typeof formData !== "object") {
             return {};
@@ -1669,7 +1689,7 @@ class OnboardingService extends BaseService {
 
         const records = await db.OnboardingRecord.findAll();
         const match = records.find((record) => {
-            const formData = record?.formData || {};
+            const formData = this.parseJsonColumn(record?.formData);
             const candidateValues = [
                 formData.employeeId,
                 formData.employeeID,
@@ -1752,7 +1772,7 @@ class OnboardingService extends BaseService {
             return null;
         }
 
-        const existingData = record?.formData || {};
+        const existingData = this.parseJsonColumn(record?.formData);
         const fallbackFullName = this.normalizeFullName(existingData, personal?.fullName || "");
         const nameParts = String(fallbackFullName || "").trim().split(/\s+/).filter(Boolean);
         const formData = {
