@@ -3,6 +3,11 @@ const { Server } = require("socket.io");
 
 let io;
 const userSockets = new Map();
+const frontendUrl = process.env.FRONTEND_URL || (
+    process.env.NODE_ENV === "production"
+        ? "https://will.khosocial.com"
+        : "http://localhost:5173"
+);
 
 function readCookie(cookieHeader, name) {
     const value = cookieHeader?.split(";").map((item) => item.trim()).find((item) => item.startsWith(`${name}=`));
@@ -12,7 +17,7 @@ function readCookie(cookieHeader, name) {
 function initializeSocket(httpServer) {
     io = new Server(httpServer, {
         cors: {
-            origin: process.env.FRONTEND_URL || "http://localhost:5173",
+            origin: frontendUrl,
             credentials: true
         }
     });

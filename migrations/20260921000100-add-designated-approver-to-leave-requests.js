@@ -2,13 +2,19 @@
 
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.addColumn("leave_requests", "designatedApproverId", {
-            type: Sequelize.INTEGER,
-            allowNull: true,
-        });
+        const columns = await queryInterface.describeTable("leave_requests");
+        if (!columns.designatedApproverId) {
+            await queryInterface.addColumn("leave_requests", "designatedApproverId", {
+                type: Sequelize.INTEGER,
+                allowNull: true,
+            });
+        }
     },
 
     async down(queryInterface) {
-        await queryInterface.removeColumn("leave_requests", "designatedApproverId");
+        const columns = await queryInterface.describeTable("leave_requests");
+        if (columns.designatedApproverId) {
+            await queryInterface.removeColumn("leave_requests", "designatedApproverId");
+        }
     },
 };

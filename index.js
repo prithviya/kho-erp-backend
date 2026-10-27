@@ -9,6 +9,12 @@ const fs = require("fs");
 const logger = require("./src/helpers/logger");
 require("dotenv").config();
 const app = express();
+const frontendUrl = process.env.FRONTEND_URL || (
+    process.env.NODE_ENV === "production"
+        ? "https://will.khosocial.com"
+        : "http://localhost:5173"
+);
+const frontendOrigin = new URL(frontendUrl).origin;
 /**
  * Trust Proxy
  */
@@ -21,9 +27,7 @@ if (process.env.NODE_ENV === "production") {
 app.use(helmet());
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:5173",
-        // origin: process.env.FRONTEND_URL || "https://will.khosocial.com",
-        //origin: process.env.FRONTEND_URL || "https://staging.khosocial.com",
+        origin: frontendUrl,
         credentials: true,
     })
 );
@@ -90,7 +94,7 @@ app.use("/uploads", express.static(uploadsPath, {
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
         res.setHeader(
             "Content-Security-Policy",
-            "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173;"
+            `frame-ancestors 'self' ${frontendOrigin};`
         );
     }
 }));

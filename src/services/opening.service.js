@@ -61,7 +61,13 @@ class OpeningService extends BaseService {
             throw error;
         }
 
-        const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+        const frontendUrl = (
+            process.env.FRONTEND_URL || (
+                process.env.NODE_ENV === "production"
+                    ? "https://will.khosocial.com"
+                    : "http://localhost:5173"
+            )
+        ).replace(/\/$/, "");
 
         opening.jobOpeningUrl = `${frontendUrl}/cif-form?jobid=${opening.jobid}`;
         await opening.save();

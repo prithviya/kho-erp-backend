@@ -151,6 +151,14 @@ const ensureLeaveRequestCompatibilityColumns = async () => {
         });
         logger.info("Added missing leave_requests.clientName compatibility column.");
     }
+
+    if (!columns.designatedApproverId) {
+        await queryInterface.addColumn(tableName, "designatedApproverId", {
+            type: db.Sequelize.INTEGER,
+            allowNull: true,
+        });
+        logger.info("Added missing leave_requests.designatedApproverId compatibility column.");
+    }
 };
 
 const connectDatabase = async () => {
