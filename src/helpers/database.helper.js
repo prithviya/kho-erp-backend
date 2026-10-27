@@ -102,6 +102,57 @@ const ensureUserCompatibilityColumns = async () => {
     }
 };
 
+const ensureProjectOnboardCompatibilityColumns = async () => {
+    const tableName = "project_onboards";
+    const queryInterface = db.sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (!columns.assignedVendorIds) {
+        await queryInterface.addColumn(tableName, "assignedVendorIds", {
+            type: db.Sequelize.JSON,
+            allowNull: false,
+            defaultValue: [],
+        });
+        logger.info("Added missing project_onboards.assignedVendorIds compatibility column.");
+    }
+};
+
+const ensureTaskCompatibilityColumns = async () => {
+    const tableName = "tasks";
+    const queryInterface = db.sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (!columns.assignedVendorId) {
+        await queryInterface.addColumn(tableName, "assignedVendorId", {
+            type: db.Sequelize.INTEGER,
+            allowNull: true,
+        });
+        logger.info("Added missing tasks.assignedVendorId compatibility column.");
+    }
+
+    if (!columns.reminderAt) {
+        await queryInterface.addColumn(tableName, "reminderAt", {
+            type: db.Sequelize.DATE,
+            allowNull: true,
+        });
+        logger.info("Added missing tasks.reminderAt compatibility column.");
+    }
+};
+
+const ensureLeaveRequestCompatibilityColumns = async () => {
+    const tableName = "leave_requests";
+    const queryInterface = db.sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (!columns.clientName) {
+        await queryInterface.addColumn(tableName, "clientName", {
+            type: db.Sequelize.STRING(200),
+            allowNull: true,
+        });
+        logger.info("Added missing leave_requests.clientName compatibility column.");
+    }
+};
+
 const connectDatabase = async () => {
     try {
         await db.sequelize.authenticate();
@@ -125,7 +176,10 @@ const connectDatabase = async () => {
 
             await ensureOnboardingCompatibilityColumns();
             await ensureUserCompatibilityColumns();
+            await ensureProjectOnboardCompatibilityColumns();
+            await ensureTaskCompatibilityColumns();
             await db.sequelize.sync(alterSyncEnabled ? { alter: true } : undefined);
+            await ensureLeaveRequestCompatibilityColumns();
             logger.info(
                 alterSyncEnabled
                     ? "Database schema sync completed with alter=true"
