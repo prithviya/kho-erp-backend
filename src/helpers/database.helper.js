@@ -130,12 +130,42 @@ const ensureTaskCompatibilityColumns = async () => {
         logger.info("Added missing tasks.assignedVendorId compatibility column.");
     }
 
+    if (!columns.dueTime) {
+        await queryInterface.addColumn(tableName, "dueTime", {
+            type: db.Sequelize.STRING(5),
+            allowNull: true,
+        });
+        logger.info("Added missing tasks.dueTime compatibility column.");
+    }
+
+    if (!columns.additionalAssigneeIds) {
+        await queryInterface.addColumn(tableName, "additionalAssigneeIds", {
+            type: db.Sequelize.JSON,
+            allowNull: true,
+        });
+        logger.info("Added missing tasks.additionalAssigneeIds compatibility column.");
+    }
+
     if (!columns.reminderAt) {
         await queryInterface.addColumn(tableName, "reminderAt", {
             type: db.Sequelize.DATE,
             allowNull: true,
         });
         logger.info("Added missing tasks.reminderAt compatibility column.");
+    }
+};
+
+const ensureTaskChatCompatibilityColumns = async () => {
+    const tableName = "task_chat_messages";
+    const queryInterface = db.sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (!columns.editedAt) {
+        await queryInterface.addColumn(tableName, "editedAt", {
+            type: db.Sequelize.DATE,
+            allowNull: true,
+        });
+        logger.info("Added missing task_chat_messages.editedAt compatibility column.");
     }
 };
 
@@ -158,6 +188,21 @@ const ensureLeaveRequestCompatibilityColumns = async () => {
             allowNull: true,
         });
         logger.info("Added missing leave_requests.designatedApproverId compatibility column.");
+    }
+};
+
+const ensureRolePermissionConfigurationColumn = async () => {
+    const tableName = "roles";
+    const queryInterface = db.sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (!columns.permissionsConfigured) {
+        await queryInterface.addColumn(tableName, "permissionsConfigured", {
+            type: db.Sequelize.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+        });
+        logger.info("Added missing roles.permissionsConfigured compatibility column.");
     }
 };
 
@@ -188,6 +233,7 @@ const connectDatabase = async () => {
             await ensureTaskCompatibilityColumns();
             await db.sequelize.sync(alterSyncEnabled ? { alter: true } : undefined);
             await ensureLeaveRequestCompatibilityColumns();
+            await ensureTaskChatCompatibilityColumns();
             logger.info(
                 alterSyncEnabled
                     ? "Database schema sync completed with alter=true"
@@ -233,6 +279,20 @@ const connectDatabase = async () => {
             logger.warn(
                 "Database schema sync skipped. Review the DB schema and model definitions for mismatches."
             );
+        }
+
+        if (process.env.DB_AUTO_SYNC !== "false") {
+            await ensureRolePermissionConfigurationColumn();
+            try {
+                // Additive: only creates missing standard menus and actions; never changes existing rows.
+                const roleService = require("../services/role.service");
+                const result = await roleService.initializePermissionCatalog();
+                if (result.createdModules || result.createdPermissions) {
+                    logger.info(`Permission catalog initialized: ${result.createdModules} menus, ${result.createdPermissions} permissions added.`);
+                }
+            } catch (catalogError) {
+                logger.warn(`Permission catalog initialization skipped: ${catalogError.message}`);
+            }
         }
     } catch (error) {
         logger.error("❌ Database Connection Failed");

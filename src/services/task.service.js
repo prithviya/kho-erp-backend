@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { sequelize, Task, TaskActivity, ProjectOnboard, ProjectAssignment, User, Vendor } = require("../model");
+const { sequelize, Task, TaskActivity, TaskChatMessage, ProjectOnboard, ProjectAssignment, User, Vendor } = require("../model");
 const taskRepository = require("../repository/task.repository");
 const notificationService = require("./notification.service");
 const { emitToUser } = require("../realtime/socket");
@@ -18,6 +18,17 @@ function httpError(message, status = 400) {
     const error = new Error(message);
     error.status = status;
     return error;
+}
+
+function formatDue(date, time) {
+    if (!date) return "Not set";
+    const [year, month, day] = String(date).slice(0, 10).split("-").map(Number);
+    const label = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", {
+        day: "2-digit", month: "short", year: "numeric", timeZone: "UTC"
+    });
+    if (!time) return label;
+    const [hour, minute] = String(time).split(":").map(Number);
+    return `${label}, ${String(hour % 12 || 12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
 function isManager(actor) {
@@ -100,7 +111,25 @@ class TaskService {
 
     canChangeStatus(task, actor = {}) {
         if (this.canManage(task, actor)) return true;
-        return Number(task.assignedToId) === Number(actor.id);
+        const me = Number(actor.id);
+        if (Number(task.assignedToId) === me) return true;
+        if (Number(task.reportingHeadId) === me || Number(task.createdBy) === me) return true;
+        if (Array.isArray(task.additionalAssigneeIds) && task.additionalAssigneeIds.some((id) => Number(id) === me)) return true;
+
+        const project = task.project || {};
+        const toIds = (value) => {
+            if (Array.isArray(value)) return value;
+            if (typeof value !== "string") return value === null || value === undefined ? [] : [value];
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+            } catch {
+                return [];
+            }
+        };
+        return Number(project.reportingHeadId) === me
+            || toIds(project.spocIds).some((id) => Number(id) === me)
+            || toIds(project.projectManagerIds).some((id) => Number(id) === me);
     }
 
     buildFilters(filters = {}) {
@@ -124,7 +153,17 @@ class TaskService {
             ...this.buildFilters(filters),
             ...(await this.getVisibilityWhere(actor))
         };
-        return taskRepository.listTasks(where);
+        const tasks = await taskRepository.listTasks(where);
+        const taskIds = tasks.map((task) => task.id);
+        if (!taskIds.length) return tasks;
+        const counts = await TaskChatMessage.findAll({
+            attributes: ["taskId", [sequelize.fn("COUNT", sequelize.col("id")), "total"]],
+            where: { taskId: { [Op.in]: taskIds } },
+            group: ["taskId"],
+            raw: true
+        });
+        const countByTask = new Map(counts.map((row) => [Number(row.taskId), Number(row.total)]));
+        return tasks.map((task) => ({ ...task.toJSON(), commentsCount: countByTask.get(Number(task.id)) || 0 }));
     }
 
     async getTaskById(id, actor = {}) {
@@ -197,6 +236,9 @@ class TaskService {
         if (data.title !== undefined) payload.title = String(data.title).trim();
         if (data.description !== undefined) payload.description = data.description ? String(data.description).trim() : null;
         if (data.assignedToId !== undefined) payload.assignedToId = data.assignedToId === null ? null : Number(data.assignedToId);
+        if (data.additionalAssigneeIds !== undefined) {
+            payload.additionalAssigneeIds = [...new Set((data.additionalAssigneeIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+        }
         if (data.assignedVendorId !== undefined) payload.assignedVendorId = Number(data.assignedVendorId);
         if (data.reportingHeadId !== undefined) payload.reportingHeadId = data.reportingHeadId ? Number(data.reportingHeadId) : null;
         if (data.priority !== undefined) {
@@ -205,6 +247,7 @@ class TaskService {
             payload.priority = priority;
         }
         if (data.dueDate !== undefined) payload.dueDate = data.dueDate || null;
+        if (data.dueTime !== undefined) payload.dueTime = data.dueTime || null;
         if (data.reminderAt !== undefined) payload.reminderAt = data.reminderAt || null;
 
         return payload;
@@ -239,6 +282,16 @@ class TaskService {
         if (payload.assignedToId && assignedToIds.length && !assignedToIds.some((id) => Number(id) === Number(payload.assignedToId))) {
             throw httpError("The selected assignee is not assigned to this project.", 403);
         }
+        if (payload.additionalAssigneeIds?.length) {
+            payload.additionalAssigneeIds = payload.additionalAssigneeIds.filter((id) => id !== payload.assignedToId);
+            if (assignedToIds.length && payload.additionalAssigneeIds.some((id) => !assignedToIds.some((memberId) => Number(memberId) === id))) {
+                throw httpError("The selected assignee is not assigned to this project.", 403);
+            }
+            const extraUsers = await User.findAll({ where: { id: payload.additionalAssigneeIds } });
+            if (extraUsers.length !== payload.additionalAssigneeIds.length || extraUsers.some((user) => !user.isActive)) {
+                throw httpError("Assignee not found or inactive.", 404);
+            }
+        }
         if (payload.assignedVendorId && assignedVendorIds.length && !assignedVendorIds.some((id) => Number(id) === Number(payload.assignedVendorId))) {
             throw httpError("The selected vendor is not assigned to this project.", 403);
         }
@@ -257,14 +310,50 @@ class TaskService {
         });
 
         const saved = await taskRepository.findOneById(created.id);
+        await this.recordCreationActivities(saved, actor);
         const notifications = await notificationService.createTaskNotifications({ task: saved, actor, event: "created" });
         notifications.forEach((notification) => emitToUser(notification.userId, "notification", notification.toJSON()));
         return saved;
     }
 
+    async recordCreationActivities(task, actor = {}) {
+        try {
+            const actorRecord = await User.findByPk(actor.id, { attributes: ["firstName", "lastName", "email"] });
+            const actorName = actorRecord
+                ? `${actorRecord.firstName || ""} ${actorRecord.lastName || ""}`.trim() || actorRecord.email
+                : actor.email || "Unknown user";
+
+            const extraIds = Array.isArray(task.additionalAssigneeIds) ? task.additionalAssigneeIds : [];
+            const names = [];
+            if (task.assignee) names.push(`${task.assignee.firstName || ""} ${task.assignee.lastName || ""}`.trim());
+            if (extraIds.length) {
+                const extras = await User.findAll({ where: { id: extraIds }, attributes: ["firstName", "lastName"] });
+                extras.forEach((user) => names.push(`${user.firstName || ""} ${user.lastName || ""}`.trim()));
+            }
+            if (!names.length && task.assignedVendorId) names.push("Vendor");
+
+            const entries = [{ action: "TASK_CREATED", previousValue: null, newValue: task.title }];
+            if (names.length) entries.push({ action: "ASSIGNED", previousValue: null, newValue: names.join(", ").slice(0, 255) });
+            if (task.dueDate) entries.push({ action: "DUE_DATE_SET", previousValue: null, newValue: formatDue(task.dueDate, task.dueTime) });
+
+            for (const entry of entries) {
+                const activity = await TaskActivity.create({
+                    taskId: Number(task.id),
+                    actorId: actor.id || null,
+                    actorName,
+                    ...entry
+                });
+                emitTaskActivity(task, activity);
+            }
+        } catch (error) {
+            // Activity logging must never fail task creation.
+            console.error("Failed to record task creation activities:", error.message);
+        }
+    }
+
     async updateTask(id, data, actor = {}) {
         const task = await this.getTaskById(id, actor);
-        const metadataFields = new Set(["dueDate", "priority", "reminderAt"]);
+        const metadataFields = new Set(["dueDate", "dueTime", "priority", "reminderAt"]);
         const isMetadataOnlyUpdate = Object.keys(data).length > 0
             && Object.keys(data).every((field) => metadataFields.has(field));
         const canEditMetadata = isMetadataOnlyUpdate
@@ -286,11 +375,14 @@ class TaskService {
                 ? task.assignedToId !== null
                 : Number(payload.assignedToId) !== Number(task.assignedToId));
         const changedFields = [];
-        if (payload.dueDate !== undefined && String(payload.dueDate || "") !== String(task.dueDate || "")) {
+        if ((payload.dueDate !== undefined && String(payload.dueDate || "") !== String(task.dueDate || ""))
+            || (payload.dueTime !== undefined && String(payload.dueTime || "") !== String(task.dueTime || ""))) {
+            const nextDate = payload.dueDate !== undefined ? payload.dueDate : task.dueDate;
+            const nextTime = payload.dueTime !== undefined ? payload.dueTime : task.dueTime;
             changedFields.push({
                 action: "DUE_DATE_CHANGED",
-                previousValue: task.dueDate || "Not set",
-                newValue: payload.dueDate || "Not set"
+                previousValue: formatDue(task.dueDate, task.dueTime),
+                newValue: formatDue(nextDate, nextTime)
             });
         }
         if (payload.priority !== undefined && payload.priority !== task.priority) {
@@ -421,6 +513,7 @@ function emitTaskActivity(task, activity) {
     const project = task.project || {};
     const userIds = new Set([
         task.assignedToId,
+        ...(Array.isArray(task.additionalAssigneeIds) ? task.additionalAssigneeIds : []),
         task.reportingHeadId,
         task.createdBy,
         activity.actorId,

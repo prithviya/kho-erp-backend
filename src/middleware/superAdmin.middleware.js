@@ -11,6 +11,10 @@ module.exports = async (req, res, next) => {
             return ApiResponse.unauthorized(res, "Unauthorized access.");
         }
 
+        if (req.permissionAccess?.granted && !req.user.isSuperAdmin) {
+            return next();
+        }
+
         const user = await User.findByPk(req.user.id, {
             include: [
                 {

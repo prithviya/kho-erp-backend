@@ -10,6 +10,12 @@ const logger = require("../helpers/logger");
 class AuthService {
     // Register a new user
     async register(data) {
+        if (Array.isArray(data.roleIds) && data.roleIds.length > 0) {
+            const error = new Error("Only Super Admin can assign roles to users.");
+            error.status = 403;
+            throw error;
+        }
+
         logger.info(`Registering new user with email: ${data.email}`);
         const transaction = await sequelize.transaction();
         try {

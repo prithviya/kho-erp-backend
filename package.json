@@ -11,6 +11,7 @@
     "migrate:status": "npx sequelize-cli db:migrate:status",
     "migration:generate": "npx sequelize-cli migration:generate --name",
     "seed:roles": "node scripts/seedCanonicalRoles.js",
+    "backfill:role-permissions": "node scripts/backfillRolePermissions.js",
     "seed:static": "node seed.js"
   },
   "keywords": [],

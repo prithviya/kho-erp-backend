@@ -16,6 +16,13 @@ const baseTaskValidation = [
         .optional({ nullable: true })
         .isString()
         .withMessage("description must be text."),
+    body("additionalAssigneeIds")
+        .optional({ nullable: true })
+        .isArray()
+        .withMessage("additionalAssigneeIds must be a list of user ids."),
+    body("additionalAssigneeIds.*")
+        .isInt({ min: 1 })
+        .withMessage("additionalAssigneeIds must contain positive integers."),
     body("reportingHeadId")
         .optional({ nullable: true })
         .isInt({ min: 1 })
@@ -28,6 +35,10 @@ const baseTaskValidation = [
         .optional({ nullable: true })
         .isISO8601()
         .withMessage("dueDate must be a valid date (YYYY-MM-DD)."),
+    body("dueTime")
+        .optional({ nullable: true })
+        .matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+        .withMessage("dueTime must be in HH:MM format."),
     body("reminderAt")
         .optional({ nullable: true })
         .isISO8601()

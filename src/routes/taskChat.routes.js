@@ -22,5 +22,7 @@ const upload = multer({
 
 router.get("/:taskId", authMiddleware, controller.listMessages);
 router.post("/:taskId", authMiddleware, upload.array("attachments", 5), controller.createMessage);
+router.put("/:taskId/messages/:messageId", authMiddleware, upload.array("attachments", 5), controller.updateMessage);
+router.delete("/:taskId/messages/:messageId", authMiddleware, controller.deleteMessage);
 
 module.exports = router;

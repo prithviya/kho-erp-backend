@@ -27,6 +27,15 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: true
             },
+            additionalAssigneeIds: {
+                type: DataTypes.JSON,
+                allowNull: true,
+                get() {
+                    const value = this.getDataValue("additionalAssigneeIds");
+                    if (typeof value !== "string") return value;
+                    try { return JSON.parse(value); } catch { return []; }
+                }
+            },
             assignedVendorId: {
                 type: DataTypes.INTEGER,
                 allowNull: true
@@ -47,6 +56,10 @@ module.exports = (sequelize, DataTypes) => {
             },
             dueDate: {
                 type: DataTypes.DATEONLY,
+                allowNull: true
+            },
+            dueTime: {
+                type: DataTypes.STRING(5),
                 allowNull: true
             },
             reminderAt: {

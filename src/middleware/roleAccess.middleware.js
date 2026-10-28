@@ -80,6 +80,10 @@ function requireAnyRole(allowedRoles = []) {
                 return next();
             }
 
+            if (req.permissionAccess?.granted) {
+                return next();
+            }
+
             const hasAllowedRole = normalizedAllowed.some((role) =>
                 req.user.roleSet.has(role)
             );

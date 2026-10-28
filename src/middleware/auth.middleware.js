@@ -1,10 +1,14 @@
 // Authentication middleware to verify JWT tokens and user status
 const jwt = require("jsonwebtoken");
-const { User, Role } = require("../model");
+const { User, Role, Permission } = require("../model");
 const ApiResponse = require("../helpers/apiResponse");
 const { normalizeRole } = require("./roleAccess.middleware");
 const authenticate = async (req, res, next) => {
     try {
+        if (req.user?.id) {
+            return next();
+        }
+
         const authHeader = req.headers.authorization;
         const bearerToken = authHeader && authHeader.startsWith("Bearer ")
             ? authHeader.split(" ")[1]
@@ -26,8 +30,18 @@ const authenticate = async (req, res, next) => {
                 {
                     model: Role,
                     as: "roles",
-                    attributes: ["id", "name", "code"],
+                    attributes: ["id", "name", "code", "isActive", "permissionsConfigured"],
                     through: { attributes: [] },
+                    include: [
+                        {
+                            model: Permission,
+                            as: "permissions",
+                            attributes: ["id", "permissionKey", "action"],
+                            through: { attributes: [] },
+                            where: { isActive: true },
+                            required: false,
+                        },
+                    ],
                 },
             ],
         });

@@ -26,3 +26,29 @@ exports.createMessage = asyncHandler(async (req, res) => {
     );
     return ApiResponse.created(res, "Task message sent successfully.", message);
 });
+
+exports.updateMessage = asyncHandler(async (req, res) => {
+    const newAttachments = (req.files || []).map((file) => ({
+        name: file.originalname,
+        url: `/uploads/task-chat/${file.filename}`,
+        mimeType: file.mimetype,
+        size: file.size
+    }));
+    const body = req.body || {};
+    let removedUrls = body.removedUrls || [];
+    if (typeof removedUrls === "string") {
+        try { removedUrls = JSON.parse(removedUrls); } catch { removedUrls = []; }
+    }
+    const message = await taskChatService.updateMessage(
+        req.params.taskId,
+        req.params.messageId,
+        { ...body, removedUrls, newAttachments },
+        req.user
+    );
+    return ApiResponse.success(res, "Comment updated successfully.", message);
+});
+
+exports.deleteMessage = asyncHandler(async (req, res) => {
+    await taskChatService.deleteMessage(req.params.taskId, req.params.messageId, req.user);
+    return ApiResponse.success(res, "Comment deleted successfully.");
+});

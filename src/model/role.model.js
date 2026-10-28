@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.BOOLEAN,
                 defaultValue: true,
             },
+            permissionsConfigured: {
+                type: DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: false,
+            },
         },
         {
             tableName: "roles",
