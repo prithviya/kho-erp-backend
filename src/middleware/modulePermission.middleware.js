@@ -23,6 +23,10 @@ function requireModulePermission(moduleCodes, actionOverride = null) {
             return ApiResponse.unauthorized(res, "Unauthorized access.");
         }
 
+        if (req.method === "DELETE" && req.baseUrl === "/tasks" && /^\/\d+$/.test(req.path)) {
+            return next();
+        }
+
         const action = actionOverride || METHOD_ACTIONS[req.method];
         if (!action) {
             return ApiResponse.forbidden(res, "No permission is defined for this action.");

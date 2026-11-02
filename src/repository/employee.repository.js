@@ -19,6 +19,16 @@ class EmployeeRepository extends BaseRepository {
         return this.model.findOne({ where: { employeeCode }, paranoid: false });
     }
 
+    async findByEmployeeCodeExcluding(employeeCode, excludeId) {
+        return this.model.findOne({
+            where: {
+                employeeCode,
+                id: { [Op.ne]: excludeId },
+            },
+            paranoid: false,
+        });
+    }
+
     async findForUser({ email, employeeCode }) {
         if (employeeCode) {
             const employee = await this.model.findOne({ where: { employeeCode } });

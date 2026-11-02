@@ -1,7 +1,12 @@
 const { User, Employee, Role, Permission, RefreshToken, Module } = require("../model");
 const { Op } = require("sequelize");
+const { normalizeEmployeeCode } = require("../helpers/employeeCode");
 class AuthRepository {
     async login(identifier) {
+        const employeeCodes = [...new Set([
+            identifier,
+            normalizeEmployeeCode(identifier),
+        ].filter(Boolean))];
         const userIncludes = [
             {
                 model: Role,
@@ -25,7 +30,7 @@ class AuthRepository {
                 [Op.or]: [
                     { email: identifier },
                     { username: identifier },
-                    { employeeRecord: identifier },
+                    { employeeRecord: { [Op.in]: employeeCodes } },
                 ]
             },
             paranoid: false,
@@ -34,7 +39,7 @@ class AuthRepository {
         if (user) return user;
 
         const employee = await Employee.findOne({
-            where: { employeeCode: identifier },
+            where: { employeeCode: normalizeEmployeeCode(identifier) },
             attributes: ["email"],
         });
         if (!employee?.email) return null;

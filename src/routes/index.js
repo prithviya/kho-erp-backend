@@ -100,7 +100,9 @@ const permissionedRoutes = [
         action === "view"
             ? ["employee.view", "onboarding.view", "payroll_management.view", "project_details.view", "project_onboard.view", "tasks.view", "assign_board.view"]
                         : [`employee.${action}`]
-                ), "./employee.routes"],
+                ), "./employee.routes", [
+        { method: "GET", path: "/me/profile" },
+    ]],
     ["/recruitments", "recruitment", "./recruitment.routes"],
     ["/onboardings", (req, action) => (
         action === "view"

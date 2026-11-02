@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const { sequelize, User, Role } = require("../model");
 const repository = require("../repository/user.repository");
 const logger = require("../helpers/logger");
+const { normalizeEmployeeCode } = require("../helpers/employeeCode");
 
 const createUser = async (data) => {
   logger.info(`Creating user: ${data.email}`);
@@ -32,7 +33,7 @@ const createUser = async (data) => {
       email: data.email,
       username: data.username,
       phone: data.phone || null,
-      employeeRecord: data.employeeRecord || null,
+      employeeRecord: normalizeEmployeeCode(data.employeeRecord) || null,
       password: hashedPassword,
       isActive: typeof data.isActive === "boolean" ? data.isActive : true,
       canDelete: typeof data.canDelete === "boolean" ? data.canDelete : true
@@ -78,7 +79,7 @@ const updateUser = async (id, data) => {
       email: data.email,
       username: data.username,
       phone: data.phone || null,
-      employeeRecord: data.employeeRecord || null,
+      employeeRecord: normalizeEmployeeCode(data.employeeRecord) || null,
       isActive: typeof data.isActive === "boolean" ? data.isActive : user.isActive,
       canDelete: typeof data.canDelete === "boolean" ? data.canDelete : user.canDelete
     };

@@ -24,6 +24,6 @@ router.put("/:id", authMiddleware, updateTaskValidation, validate, controller.up
 // Assignee, reporting head, or super admin may move a task along.
 router.patch("/:id/status", authMiddleware, updateTaskStatusValidation, validate, controller.updateTaskStatus);
 
-router.delete("/:id", authMiddleware, requireAnyRole(["super_admin"]), requireDeleteAccess, taskIdParamValidation, validate, controller.deleteTask);
+router.delete("/:id", authMiddleware, requireDeleteAccess, taskIdParamValidation, validate, controller.deleteTask);
 
 module.exports = router;

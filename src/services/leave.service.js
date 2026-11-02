@@ -1,5 +1,11 @@
 const { Op } = require("sequelize");
 const db = require("../model");
+const { normalizeEmployeeCode } = require("../helpers/employeeCode");
+const {
+    PERMISSION_MONTHLY_USAGE_LIMIT_HOURS,
+    getPermissionMonthBalance,
+    getCasualLeaveMonthBalance,
+} = require("./leave.policy");
 
 const APPROVER_ROLES = new Set(["hr", "manager", "superadmin"]);
 const CONFLICTING_LEAVE_CODES = new Set([
@@ -13,6 +19,27 @@ function normalizeRole(value = "") {
         .trim()
         .toLowerCase()
         .replace(/[\s_-]+/g, "");
+}
+
+function isOrganizationLeaveAdmin(user = {}) {
+    return Boolean(
+        user?.isSuperAdmin
+        || user?.roleSet?.has(normalizeRole("hr"))
+    );
+}
+
+function isTeamLeaveReportViewer(user = {}) {
+    const roleSet = user?.roleSet;
+    return Boolean(
+        roleSet
+        && typeof roleSet.has === "function"
+        && ["manager", "head", "teamlead", "reportinghead", "departmenthead", "ceo"]
+            .some((role) => roleSet.has(normalizeRole(role)))
+    );
+}
+
+function normalizeReportValue(value) {
+    return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function isApprover(user = {}) {
@@ -75,6 +102,30 @@ function getMonthDateRange(year, month) {
     return [`${year}-${monthValue}-01`, `${year}-${monthValue}-${String(lastDay).padStart(2, "0")}`];
 }
 
+function getPreviousMonth(year, month) {
+    return month === 1
+        ? { year: year - 1, month: 12 }
+        : { year, month: month - 1 };
+}
+
+function getCasualRequestDaysInMonth(request, monthStart, monthEnd) {
+    const requestStart = String(request.fromDate);
+    const requestEnd = String(request.toDate || request.fromDate);
+    if (requestStart > monthEnd || requestEnd < monthStart) return 0;
+    if (String(request.durationType).toUpperCase() === "HALF_DAY") {
+        return requestStart >= monthStart && requestStart <= monthEnd
+            ? toNumber(request.requestedDays)
+            : 0;
+    }
+
+    const overlapStart = requestStart > monthStart ? requestStart : monthStart;
+    const overlapEnd = requestEnd < monthEnd ? requestEnd : monthEnd;
+    return Math.min(
+        toNumber(request.requestedDays),
+        inclusiveDiffDays(overlapStart, overlapEnd)
+    );
+}
+
 function getMonthKeys(fromDate, toDate) {
     const keys = [];
     let year = Number(String(fromDate).slice(0, 4));
@@ -108,13 +159,69 @@ function validateCategoryDuration(category, durationType) {
 }
 
 class LeaveService {
+    async getEmployeeJoiningDate(userId, actor = {}) {
+        let employeeRecord = Number(actor.id) === Number(userId)
+            ? normalizeEmployeeCode(actor.employeeRecord)
+            : null;
+        if (!employeeRecord) {
+            const user = await db.User.findByPk(userId, { attributes: ["employeeRecord"] });
+            employeeRecord = normalizeEmployeeCode(user?.employeeRecord);
+        }
+        if (!employeeRecord) return null;
+
+        const onboardingInfo = await db.OnboardingInfo.findOne({
+            where: { employeeId: employeeRecord },
+            attributes: ["doj"],
+            order: [["onboardinginfoid", "DESC"]],
+        });
+        return onboardingInfo?.doj ? String(onboardingInfo.doj).slice(0, 10) : null;
+    }
+
+    async getTeamUserIds(actor = {}, existingOnboardingInfos = null) {
+        const onboardingInfos = existingOnboardingInfos || await db.OnboardingInfo.findAll({
+            attributes: ["employeeId", "reportHead"],
+            order: [["onboardinginfoid", "DESC"]],
+        });
+        const actorIdentifiers = new Set([
+            actor.id,
+            actor.email,
+            actor.employeeRecord,
+            `${actor.firstName || ""} ${actor.lastName || ""}`.trim(),
+        ].map(normalizeReportValue).filter(Boolean));
+        const teamEmployeeCodes = new Set();
+        onboardingInfos.forEach((info) => {
+            const employeeCode = String(info.employeeId || "").trim();
+            if (employeeCode && actorIdentifiers.has(normalizeReportValue(info.reportHead))) {
+                teamEmployeeCodes.add(employeeCode);
+            }
+        });
+
+        const [teamUsers, assignedRequests] = await Promise.all([
+            teamEmployeeCodes.size
+                ? db.User.findAll({
+                    where: { employeeRecord: { [Op.in]: [...teamEmployeeCodes] } },
+                    attributes: ["id"],
+                })
+                : [],
+            db.LeaveRequest.findAll({
+                where: { designatedApproverId: Number(actor.id) },
+                attributes: ["userId"],
+                group: ["userId"],
+            }),
+        ]);
+        return [...new Set([
+            ...teamUsers.map((user) => Number(user.id)),
+            ...assignedRequests.map((request) => Number(request.userId)),
+        ])];
+    }
+
     async resolveDesignatedApprover(requester) {
         if (!requester?.employeeRecord) {
             return null;
         }
 
         const onboardingInfo = await db.OnboardingInfo.findOne({
-            where: { employeeId: requester.employeeRecord },
+            where: { employeeId: normalizeEmployeeCode(requester.employeeRecord) },
             attributes: ["reportHead"],
             order: [["onboardinginfoid", "DESC"]],
         });
@@ -148,35 +255,16 @@ class LeaveService {
 
     getRequestAccessWhere(filters = {}, actor = {}) {
         const actorId = Number(actor.id);
-        if (isApprover(actor) && !filters.userId) {
-            const where = {};
-            if (filters.status) {
-                where.status = String(filters.status).toUpperCase();
-            }
-            if (filters.year) {
-                const year = Number(filters.year);
-                if (Number.isInteger(year) && year > 2000) {
-                    where.fromDate = {
-                        [Op.between]: [`${year}-01-01`, `${year}-12-31`],
-                    };
-                }
-            }
-            return where;
-        }
+        const where = isOrganizationLeaveAdmin(actor)
+            ? {}
+            : {
+                [Op.or]: [
+                    { userId: actorId },
+                    { designatedApproverId: actorId },
+                ],
+            };
 
-        const where = {
-            [Op.or]: [
-                { userId: actorId },
-                { designatedApproverId: actorId },
-            ],
-        };
-
-        if (filters.userId) {
-            where[Op.or] = [{ userId: Number(filters.userId) }];
-            if (Number(filters.userId) === actorId) {
-                where[Op.or].push({ designatedApproverId: actorId });
-            }
-        }
+        if (filters.userId) where.userId = Number(filters.userId);
 
         if (filters.status) {
             where.status = String(filters.status).toUpperCase();
@@ -192,6 +280,125 @@ class LeaveService {
         }
 
         return where;
+    }
+
+    async getLeaveReport(filters = {}, actor = {}) {
+        const globalAccess = isOrganizationLeaveAdmin(actor);
+        const year = Number(filters.year);
+        if (filters.year && (!Number.isInteger(year) || year < 1900 || year > 9999)) {
+            const error = new Error("A valid report year is required.");
+            error.status = 400;
+            throw error;
+        }
+        const fromDate = filters.fromDate ? toIsoDate(filters.fromDate) : null;
+        const toDate = filters.toDate ? toIsoDate(filters.toDate) : null;
+        if ((filters.fromDate && !fromDate) || (filters.toDate && !toDate) || (fromDate && toDate && fromDate > toDate)) {
+            const error = new Error("A valid report date range is required.");
+            error.status = 400;
+            throw error;
+        }
+
+        let allowedUserIds = null;
+        const onboardingInfos = await db.OnboardingInfo.findAll({
+            attributes: ["employeeId", "reportHead", "department", "firstName", "lastName", "onboardinginfoid"],
+            order: [["onboardinginfoid", "DESC"]],
+        });
+        const onboardingByEmployeeCode = new Map();
+        onboardingInfos.forEach((info) => {
+            const employeeCode = String(info.employeeId || "").trim();
+            if (employeeCode && !onboardingByEmployeeCode.has(employeeCode)) {
+                onboardingByEmployeeCode.set(employeeCode, info);
+            }
+        });
+        if (!globalAccess) {
+            if (!isTeamLeaveReportViewer(actor)) {
+                const error = new Error("You do not have access to team leave reports.");
+                error.status = 403;
+                throw error;
+            }
+            allowedUserIds = await this.getTeamUserIds(actor, onboardingInfos);
+            if (!allowedUserIds.length) {
+                const error = new Error("You do not have access to team leave reports.");
+                error.status = 403;
+                throw error;
+            }
+        }
+
+        const where = {};
+        if (allowedUserIds) where.userId = { [Op.in]: allowedUserIds };
+        if (filters.employeeId) {
+            const requestedUserId = Number(filters.employeeId);
+            if (!Number.isInteger(requestedUserId) || requestedUserId < 1) {
+                const error = new Error("A valid employee filter is required.");
+                error.status = 400;
+                throw error;
+            }
+            if (allowedUserIds && !allowedUserIds.includes(requestedUserId)) {
+                const error = new Error("You do not have access to this employee's leave report.");
+                error.status = 403;
+                throw error;
+            }
+            where.userId = requestedUserId;
+        }
+        if (filters.status) where.status = String(filters.status).toUpperCase();
+        if (filters.leaveType) {
+            where.categoryId = (await db.LeaveCategory.findOne({
+                where: { code: String(filters.leaveType).toUpperCase() },
+                attributes: ["id"],
+            }))?.id || -1;
+        }
+        const rangeStartCandidates = [year ? `${year}-01-01` : null, fromDate].filter(Boolean).sort();
+        const rangeStart = rangeStartCandidates[rangeStartCandidates.length - 1];
+        const rangeEnd = [year ? `${year}-12-31` : null, toDate].filter(Boolean).sort()[0];
+        if (rangeStart) where.toDate = { [Op.gte]: rangeStart };
+        if (rangeEnd) where.fromDate = { [Op.lte]: rangeEnd };
+
+        const [requests, departments] = await Promise.all([
+            db.LeaveRequest.findAll({
+                where,
+                include: [
+                    { model: db.LeaveCategory, as: "category", attributes: ["code", "name", "unit"] },
+                    { model: db.User, as: "requester", attributes: ["id", "firstName", "lastName", "email", "employeeRecord"] },
+                    { model: db.User, as: "approver", attributes: ["id", "firstName", "lastName", "email"], required: false },
+                    { model: db.User, as: "designatedApprover", attributes: ["id", "firstName", "lastName", "email"], required: false },
+                ],
+                order: [["fromDate", "DESC"], ["createdAt", "DESC"]],
+            }),
+            db.Department.findAll({ attributes: ["id", "name"] }),
+        ]);
+        const departmentsById = new Map(departments.map((department) => [Number(department.id), department.name]));
+
+        return requests.map((request) => {
+            const data = request.toJSON();
+            const requester = data.requester || {};
+            const fullName = `${requester.firstName || ""} ${requester.lastName || ""}`.trim();
+            const onboarding = onboardingByEmployeeCode.get(String(requester.employeeRecord || ""));
+            const approver = data.approver || data.designatedApprover;
+            return {
+                id: data.id,
+                userId: Number(data.userId),
+                employeeName: fullName || data.employeeName || requester.email || "Employee",
+                employeeId: requester.employeeRecord || data.employeeCode || onboarding?.employeeId || "",
+                departmentId: onboarding?.department || null,
+                departmentName: departmentsById.get(Number(onboarding?.department)) || "",
+                leaveType: data.category?.name || "Leave",
+                leaveTypeCode: data.category?.code || "",
+                unit: data.category?.unit || "DAY",
+                fromDate: data.fromDate,
+                toDate: data.toDate,
+                requestedDays: toNumber(data.requestedDays),
+                requestedHours: toNumber(data.requestedHours),
+                reason: data.reason || "",
+                status: data.status,
+                approverName: approver
+                    ? `${approver.firstName || ""} ${approver.lastName || ""}`.trim() || approver.email
+                    : "",
+                approverEmail: approver?.email || "",
+                approvedAt: data.approvedAt,
+            };
+        }).filter((row) => (
+            !filters.departmentId || Number(row.departmentId) === Number(filters.departmentId)
+        ));
     }
 
     async ensureConflictingLeaveOverlap({ userId, category, fromDate, toDate, excludeRequestId = null }) {
@@ -238,34 +445,71 @@ class LeaveService {
     }
 
     async ensureCasualLeaveMonthsAvailable({ userId, categoryId, fromDate, toDate, requestedDays, excludeRequestId = null }) {
+        const joiningDate = await this.getEmployeeJoiningDate(userId);
         const monthKeys = getMonthKeys(fromDate, toDate);
-
-        if (toNumber(requestedDays) > monthKeys.length) {
-            const error = new Error("Casual Leave is limited to 1 day per calendar month.");
-            error.status = 400;
-            throw error;
-        }
+        const firstMonth = monthKeys[0];
+        const previousMonth = getPreviousMonth(firstMonth.year, firstMonth.month);
+        const [previousMonthStart] = getMonthDateRange(previousMonth.year, previousMonth.month);
+        const [, finalMonthEnd] = getMonthDateRange(
+            monthKeys[monthKeys.length - 1].year,
+            monthKeys[monthKeys.length - 1].month
+        );
+        const where = {
+            userId,
+            categoryId,
+            fromDate: { [Op.lte]: finalMonthEnd },
+            toDate: { [Op.gte]: previousMonthStart },
+            status: { [Op.in]: ["PENDING", "APPROVED"] },
+        };
+        if (excludeRequestId) where.id = { [Op.ne]: excludeRequestId };
+        const existingRequests = await db.LeaveRequest.findAll({ where });
+        let remainingIncomingDays = toNumber(requestedDays);
 
         for (const { year, month } of monthKeys) {
             const [monthStart, monthEnd] = getMonthDateRange(year, month);
-            const where = {
-                userId,
-                categoryId,
-                fromDate: { [Op.lte]: monthEnd },
-                toDate: { [Op.gte]: monthStart },
-                status: { [Op.in]: ["PENDING", "APPROVED"] },
-            };
+            const previous = getPreviousMonth(year, month);
+            const [previousStart, previousEnd] = getMonthDateRange(previous.year, previous.month);
+            const wasOnboardedInPreviousMonth = !joiningDate || joiningDate <= previousEnd;
+            const previousRequests = wasOnboardedInPreviousMonth ? existingRequests.filter((request) => (
+                String(request.fromDate) <= previousEnd && String(request.toDate) >= previousStart
+            )) : [];
+            const currentRequests = existingRequests.filter((request) => (
+                String(request.fromDate) <= monthEnd && String(request.toDate) >= monthStart
+            ));
+            const balance = getCasualLeaveMonthBalance(
+                previousRequests,
+                currentRequests,
+                wasOnboardedInPreviousMonth
+            );
+            const requestSegmentStart = String(fromDate) > monthStart ? String(fromDate) : monthStart;
+            const requestSegmentEnd = String(toDate) < monthEnd ? String(toDate) : monthEnd;
+            let incomingDays = 0;
 
-            if (excludeRequestId) {
-                where.id = { [Op.ne]: excludeRequestId };
+            if (String(requestSegmentStart) <= String(requestSegmentEnd) && remainingIncomingDays > 0) {
+                incomingDays = String(requestedDays) === "0.5"
+                    ? (String(fromDate) >= monthStart && String(fromDate) <= monthEnd ? remainingIncomingDays : 0)
+                    : Math.min(remainingIncomingDays, inclusiveDiffDays(requestSegmentStart, requestSegmentEnd));
             }
 
-            const existingRequest = await db.LeaveRequest.findOne({ where });
-            if (existingRequest) {
-                const error = new Error(`Casual Leave is already booked for ${year}-${String(month).padStart(2, "0")}.`);
+            const existingBookedDays = currentRequests.reduce(
+                (sum, request) => sum + getCasualRequestDaysInMonth(request, monthStart, monthEnd),
+                0
+            );
+            if (existingBookedDays + incomingDays > balance.allocatedDays) {
+                const error = new Error(
+                    `Insufficient Casual Leave balance for ${year}-${String(month).padStart(2, "0")}. Available ${Number(Math.max(0, balance.allocatedDays - existingBookedDays).toFixed(2))} day(s).`
+                );
                 error.status = 400;
                 throw error;
             }
+
+            remainingIncomingDays = Number(Math.max(0, remainingIncomingDays - incomingDays).toFixed(2));
+        }
+
+        if (remainingIncomingDays > 0) {
+            const error = new Error("Requested Casual Leave days do not fit within the selected date range.");
+            error.status = 400;
+            throw error;
         }
     }
 
@@ -312,16 +556,19 @@ class LeaveService {
             });
             return;
         } else if (category.code === "PERMISSION") {
-            const fromDateObj = new Date(fromDate);
-            const month = fromDateObj.getMonth();
-            const fromMonthDate = new Date(year, month, 1).toISOString().slice(0, 10);
-            // using last day of month
-            const toMonthDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+            if (String(fromDate).slice(0, 7) !== String(toDate || fromDate).slice(0, 7)) {
+                const error = new Error("Permission requests must be within one calendar month.");
+                error.status = 400;
+                throw error;
+            }
+            const month = Number(String(fromDate).slice(5, 7));
+            const [fromMonthDate, toMonthDate] = getMonthDateRange(year, month);
             
             const where = {
                 userId,
                 categoryId: category.id,
-                fromDate: { [Op.between]: [fromMonthDate, toMonthDate] },
+                fromDate: { [Op.lte]: toMonthDate },
+                toDate: { [Op.gte]: fromMonthDate },
                 status: { [Op.in]: ["PENDING", "APPROVED"] },
             };
             if (excludeRequestId) {
@@ -329,11 +576,11 @@ class LeaveService {
             }
             
             const monthRequests = await db.LeaveRequest.findAll({ where });
-            const monthBookedHours = monthRequests.reduce((acc, req) => acc + toNumber(req.requestedHours), 0);
+            const monthBookedHours = getPermissionMonthBalance(monthRequests).bookedHours;
             const incoming = toNumber(requestedHours);
             
-            if (monthBookedHours + incoming > 2) {
-                const error = new Error(`Permission exceeds 2 hours per month. Available ${Number((2 - monthBookedHours).toFixed(2))} hours.`);
+            if (monthBookedHours + incoming > PERMISSION_MONTHLY_USAGE_LIMIT_HOURS) {
+                const error = new Error(`Permission exceeds ${PERMISSION_MONTHLY_USAGE_LIMIT_HOURS} hours per month. Available ${Number((PERMISSION_MONTHLY_USAGE_LIMIT_HOURS - monthBookedHours).toFixed(2))} hours.`);
                 error.status = 400;
                 throw error;
             }
@@ -470,12 +717,18 @@ class LeaveService {
                     as: "designatedApprover",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
+                {
+                    model: db.User,
+                    as: "approver",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                    required: false,
+                },
             ],
             order: [["createdAt", "DESC"]],
         });
     }
 
-    async listCalendarRequests(year, month) {
+    async listCalendarRequests(year, month, actor = {}) {
         const calendarYear = Number(year);
         const calendarMonth = Number(month);
         if (
@@ -496,14 +749,21 @@ class LeaveService {
             new Date(Date.UTC(calendarYear, calendarMonth, 0)).getUTCDate()
         ).padStart(2, "0")}`;
 
+        const where = {
+            fromDate: { [Op.lte]: monthEnd },
+            toDate: { [Op.gte]: monthStart },
+            status: { [Op.in]: ["PENDING", "APPROVED"] },
+        };
+        if (!isOrganizationLeaveAdmin(actor) && isTeamLeaveReportViewer(actor)) {
+            const teamUserIds = await this.getTeamUserIds(actor);
+            where.userId = { [Op.in]: [...new Set([Number(actor.id), ...teamUserIds])] };
+        }
+
         const requests = await db.LeaveRequest.findAll({
-            where: {
-                fromDate: { [Op.lte]: monthEnd },
-                toDate: { [Op.gte]: monthStart },
-                status: { [Op.in]: ["PENDING", "APPROVED"] },
-            },
+            where,
             attributes: [
                 "id",
+                "userId",
                 "employeeName",
                 "clientName",
                 "fromDate",
@@ -522,7 +782,7 @@ class LeaveService {
                 {
                     model: db.User,
                     as: "requester",
-                    attributes: ["firstName", "lastName"],
+                    attributes: ["id", "firstName", "lastName", "email"],
                 },
             ],
             order: [["fromDate", "ASC"], ["createdAt", "ASC"]],
@@ -534,10 +794,14 @@ class LeaveService {
                 .filter(Boolean)
                 .join(" ")
                 .trim();
+            const employeeName = requesterName
+                || data.employeeName
+                || data.requester?.email
+                || "Employee";
 
             return {
                 id: data.id,
-                employeeName: data.employeeName || requesterName || "Employee",
+                employeeName,
                 categoryName: data.category?.name || "Leave",
                 categoryCode: data.category?.code || null,
                 clientName: data.category?.code === "ON_THE_DUTY" ? data.clientName : null,
@@ -574,7 +838,7 @@ class LeaveService {
         if (
             Number(request.userId) !== Number(actor.id) &&
             Number(request.designatedApproverId) !== Number(actor.id) &&
-            !isApprover(actor)
+            !isOrganizationLeaveAdmin(actor)
         ) {
             const error = new Error("You can only view your own leave requests.");
             error.status = 403;
@@ -644,35 +908,6 @@ class LeaveService {
         let finalCategory = category;
         let adjustedCalculated = { ...calculated };
 
-        if (finalCategory.code === "PERMISSION") {
-            const year = Number(String(adjustedCalculated.fromDate).slice(0, 4));
-            const month = new Date(adjustedCalculated.fromDate).getMonth();
-            const fromMonthDate = new Date(year, month, 1).toISOString().slice(0, 10);
-            const toMonthDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-            
-            const where = {
-                userId,
-                categoryId: finalCategory.id,
-                fromDate: { [Op.between]: [fromMonthDate, toMonthDate] },
-                status: { [Op.in]: ["PENDING", "APPROVED"] },
-            };
-            if (excludeRequestId) {
-                where.id = { [Op.ne]: excludeRequestId };
-            }
-            const monthRequests = await db.LeaveRequest.findAll({ where });
-            const monthBookedHours = monthRequests.reduce((acc, req) => acc + toNumber(req.requestedHours), 0);
-            
-            if (monthBookedHours + adjustedCalculated.requestedHours > 2) {
-                const clCategory = await db.LeaveCategory.findOne({ where: { code: "CASUAL_LEAVE" } });
-                if (clCategory) {
-                    finalCategory = clCategory;
-                    adjustedCalculated.durationType = "HALF_DAY";
-                    adjustedCalculated.requestedDays = 0.5;
-                    adjustedCalculated.requestedHours = 0;
-                }
-            }
-        }
-
         if (finalCategory.code === "CASUAL_LEAVE") {
             const today = new Date(`${getTodayIsoDate()}T00:00:00`);
             const fromDateObj = new Date(`${adjustedCalculated.fromDate}T00:00:00`);
@@ -725,7 +960,7 @@ class LeaveService {
             throw error;
         }
 
-        const requesterId = isApprover(actor) && payload.userId
+        const requesterId = isOrganizationLeaveAdmin(actor) && payload.userId
             ? Number(payload.userId)
             : Number(actor.id);
 
@@ -750,7 +985,7 @@ class LeaveService {
 
         return db.LeaveRequest.create({
             userId: requesterId,
-            employeeCode: requester.employeeRecord || null,
+            employeeCode: normalizeEmployeeCode(requester.employeeRecord) || null,
             employeeName: `${requester.firstName || ""} ${requester.lastName || ""}`.trim() || requester.email,
             clientName: finalCategory.code === "ON_THE_DUTY" ? clientName : null,
             categoryId: finalCategory.id,
@@ -778,7 +1013,7 @@ class LeaveService {
             return null;
         }
 
-        const approver = isApprover(actor);
+        const approver = isOrganizationLeaveAdmin(actor) || Number(request.designatedApproverId) === Number(actor.id);
         const owner = Number(request.userId) === Number(actor.id);
         if (!approver && !owner) {
             const error = new Error("You can only edit your own leave request.");
@@ -853,7 +1088,7 @@ class LeaveService {
             return false;
         }
 
-        const approver = isApprover(actor);
+        const approver = isOrganizationLeaveAdmin(actor) || Number(request.designatedApproverId) === Number(actor.id);
         const owner = Number(request.userId) === Number(actor.id);
         if (!approver && !owner) {
             const error = new Error("You can only delete your own leave request.");
@@ -877,7 +1112,7 @@ class LeaveService {
             return null;
         }
 
-        if (Number(request.designatedApproverId) !== Number(actor.id)) {
+        if (Number(request.designatedApproverId) !== Number(actor.id) && !isOrganizationLeaveAdmin(actor)) {
             const error = new Error("Only the employee's designated reporting approver can approve or reject this leave request.");
             error.status = 403;
             throw error;
@@ -912,7 +1147,7 @@ class LeaveService {
 
     async getSummary(actor = {}, query = {}) {
         const year = Number(query.year) || new Date().getFullYear();
-        const targetUserId = isApprover(actor) && query.userId
+        const targetUserId = isOrganizationLeaveAdmin(actor) && query.userId
             ? Number(query.userId)
             : Number(actor.id);
 
@@ -920,7 +1155,7 @@ class LeaveService {
             throw new Error("User context is required.");
         }
 
-        const [categories, requests] = await Promise.all([
+        const [categories, requests, joiningDate] = await Promise.all([
             this.getCategories(),
             db.LeaveRequest.findAll({
                 where: {
@@ -933,27 +1168,77 @@ class LeaveService {
                     },
                 },
             }),
+            this.getEmployeeJoiningDate(targetUserId, actor),
         ]);
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const [currentMonthStart, currentMonthEnd] = getMonthDateRange(currentYear, currentMonth);
+        const previousMonth = getPreviousMonth(currentYear, currentMonth);
+        const [previousMonthStart, previousMonthEnd] = getMonthDateRange(previousMonth.year, previousMonth.month);
+        const permissionCategory = categories.find((category) => category.code === "PERMISSION");
+        const casualLeaveCategory = categories.find((category) => category.code === "CASUAL_LEAVE");
+        const [permissionMonthRequests, casualLeaveMonthRequests] = await Promise.all([
+            permissionCategory
+                ? db.LeaveRequest.findAll({
+                    where: {
+                        userId: targetUserId,
+                        categoryId: permissionCategory.id,
+                        fromDate: { [Op.lte]: currentMonthEnd },
+                        toDate: { [Op.gte]: currentMonthStart },
+                        status: { [Op.in]: ["PENDING", "APPROVED"] },
+                    },
+                })
+                : [],
+            casualLeaveCategory
+                ? db.LeaveRequest.findAll({
+                    where: {
+                        userId: targetUserId,
+                        categoryId: casualLeaveCategory.id,
+                        fromDate: { [Op.lte]: currentMonthEnd },
+                        toDate: { [Op.gte]: previousMonthStart },
+                        status: { [Op.in]: ["PENDING", "APPROVED"] },
+                    },
+                })
+                : [],
+        ]);
+        const permissionMonthBalance = getPermissionMonthBalance(permissionMonthRequests);
+        const previousCasualLeaveRequests = joiningDate && joiningDate > previousMonthEnd
+            ? []
+            : casualLeaveMonthRequests.filter((request) => (
+                String(request.fromDate) <= previousMonthEnd && String(request.toDate) >= previousMonthStart
+            ));
+        const currentCasualLeaveRequests = casualLeaveMonthRequests
+            .filter((request) => (
+                String(request.fromDate) <= currentMonthEnd && String(request.toDate) >= currentMonthStart
+            ))
+            .map((request) => ({
+                ...(request.toJSON?.() || request),
+                requestedDays: getCasualRequestDaysInMonth(request, currentMonthStart, currentMonthEnd),
+            }));
+        const casualLeaveMonthBalance = getCasualLeaveMonthBalance(
+            previousCasualLeaveRequests,
+            currentCasualLeaveRequests,
+            !joiningDate || joiningDate <= previousMonthEnd
+        );
 
         const byCategory = new Map();
         categories.forEach((category) => {
             let allocated = toNumber(category.allocatedValue);
             
             if (category.code === "CASUAL_LEAVE") {
-                const currentYear = new Date().getFullYear();
                 if (year === currentYear) {
-                    allocated = Math.max(0, 12 - new Date().getMonth());
+                    allocated = Math.max(0, 12 - now.getMonth()) + casualLeaveMonthBalance.carryForwardDays;
                 } else if (year < currentYear) {
                     allocated = 12;
                 } else {
                     allocated = 0;
                 }
             } else if (category.code === "PERMISSION") {
-                const currentYear = new Date().getFullYear();
                 if (year < currentYear) {
                     allocated = 24;
                 } else if (year === currentYear) {
-                    allocated = Math.max(0, 12 - new Date().getMonth()) * 2;
+                    allocated = Math.max(0, 12 - now.getMonth()) * 2;
                 } else {
                     allocated = 0;
                 }
@@ -972,6 +1257,13 @@ class LeaveService {
                 taken: 0,
                 pending: 0,
                 available: allocated,
+                ...(category.code === "PERMISSION" ? { monthlyBalance: permissionMonthBalance } : {}),
+                ...(category.code === "CASUAL_LEAVE"
+                    ? {
+                        carryForwardDays: year === currentYear ? casualLeaveMonthBalance.carryForwardDays : 0,
+                        monthlyBalance: year === currentYear ? casualLeaveMonthBalance : null,
+                    }
+                    : {}),
             });
         });
 
@@ -1025,6 +1317,7 @@ class LeaveService {
 
         return {
             userId: targetUserId,
+            joiningDate,
             year,
             categories: list.map((item) => ({
                 ...item,

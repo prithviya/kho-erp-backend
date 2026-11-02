@@ -30,10 +30,12 @@ const upload = multer({
 });
 
 router.get("/me/profile", authMiddleware, controller.getMyProfile);
-router.get("/", authMiddleware, requireAnyRole(["hr", "manager"]), controller.getEmployees);
-router.get("/:id", authMiddleware, requireAnyRole(["hr"]), controller.getEmployeeById);
+const employeeViewRoles = ["hr", "manager", "super_admin", "ceo", "crmexecutive", "team_member"];
+
+router.get("/", authMiddleware, requireAnyRole(employeeViewRoles), controller.getEmployees);
+router.get("/:id", authMiddleware, requireAnyRole(employeeViewRoles), controller.getEmployeeById);
 router.post("/", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.createEmployee);
-router.put("/:id", authMiddleware, requireAnyRole(["hr"]), upload.single("resume"), controller.updateEmployee);
+router.put("/:id", authMiddleware, requireAnyRole(["manager", "hr", "super_admin"]), upload.single("resume"), controller.updateEmployee);
 router.delete("/:id", authMiddleware, requireAnyRole(["super_admin"]), requireDeleteAccess, controller.deleteEmployee);
 
 module.exports = router;

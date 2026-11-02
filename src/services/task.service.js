@@ -35,6 +35,17 @@ function isManager(actor) {
     return Boolean(actor?.roleSet?.has(normalizeRole("manager")));
 }
 
+function parseIds(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== "string") return value === undefined || value === null ? [] : [value];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+    } catch {
+        return value.trim() ? [value] : [];
+    }
+}
+
 class TaskService {
     async getAccessibleProjectIds(actor = {}) {
         const me = Number(actor.id);
@@ -490,9 +501,16 @@ class TaskService {
         return saved;
     }
 
-    async deleteTask(id) {
+    async deleteTask(id, actor = {}) {
         const task = await taskRepository.findOneById(id);
         if (!task) throw httpError("Task not found.", 404);
+        const project = task.project || await ProjectOnboard.findByPk(task.projectOnboardId);
+        const isProjectSpoc = parseIds(project?.spocIds).some((spocId) => Number(spocId) === Number(actor.id));
+        const isReportingHead = Number(task.reportingHeadId) === Number(actor.id)
+            || Number(project?.reportingHeadId) === Number(actor.id);
+        if (!actor.isSuperAdmin && !isProjectSpoc && !isReportingHead) {
+            throw httpError("Only the task SPOC or reporting head can delete this task.", 403);
+        }
         await taskRepository.delete(id);
         return true;
     }

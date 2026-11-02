@@ -29,13 +29,18 @@ exports.getSummary = asyncHandler(async (req, res) => {
 exports.getCalendar = asyncHandler(async (req, res) => {
     const year = req.query.year || new Date().getFullYear();
     const month = req.query.month || new Date().getMonth() + 1;
-    const requests = await leaveService.listCalendarRequests(year, month);
+    const requests = await leaveService.listCalendarRequests(year, month, req.user);
     return ApiResponse.success(res, "Leave calendar fetched successfully.", requests);
 });
 
 exports.getRequests = asyncHandler(async (req, res) => {
     const requests = await leaveService.listRequests(req.query || {}, req.user);
     return ApiResponse.success(res, "Leave requests fetched successfully.", requests);
+});
+
+exports.getLeaveReport = asyncHandler(async (req, res) => {
+    const report = await leaveService.getLeaveReport(req.query || {}, req.user);
+    return ApiResponse.success(res, "Leave report fetched successfully.", report);
 });
 
 exports.getRequestById = asyncHandler(async (req, res) => {

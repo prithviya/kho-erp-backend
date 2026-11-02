@@ -4,6 +4,7 @@ const BaseService = require("./base.service");
 const repository = require("../repository/onboarding.repository");
 const db = require("../model");
 const { QueryTypes } = require("sequelize");
+const { normalizeEmployeeCode } = require("../helpers/employeeCode");
 
 class OnboardingService extends BaseService {
     constructor() {
@@ -16,7 +17,7 @@ class OnboardingService extends BaseService {
             const match = String(rawCode || "")
                 .trim()
                 .toUpperCase()
-                .match(/^KHO-(\d+)$/);
+                .match(/^KHO-?(\d+)$/);
 
             if (!match) return maxValue;
 
@@ -50,7 +51,7 @@ class OnboardingService extends BaseService {
         }
 
         const nextNumber = maxKho + 1;
-        return `KHO-${String(nextNumber).padStart(3, "0")}`;
+        return `KHO${String(nextNumber).padStart(3, "0")}`;
     }
 
     normalizeStatus(status) {
@@ -609,10 +610,13 @@ class OnboardingService extends BaseService {
         });
 
         if (user) {
-            if (employeeCode && !user.employeeRecord) {
+            if (
+                employeeCode &&
+                normalizeEmployeeCode(user.employeeRecord) !== normalizeEmployeeCode(employeeCode)
+            ) {
                 await user.update(
                     {
-                        employeeRecord: String(employeeCode).trim(),
+                        employeeRecord: normalizeEmployeeCode(employeeCode),
                         phone: phone || user.phone,
                     },
                     { transaction }
@@ -662,7 +666,7 @@ class OnboardingService extends BaseService {
                 email: normalizedEmail,
                 username,
                 phone: phone || null,
-                employeeRecord: String(employeeCode || "").trim() || null,
+                employeeRecord: normalizeEmployeeCode(employeeCode) || null,
                 password: hashedPassword,
                 isActive: true,
             },
@@ -751,7 +755,7 @@ class OnboardingService extends BaseService {
             eid: experienceId,
             academicid: academicId,
 
-            employeeId: formData.employeeId || null,
+            employeeId: normalizeEmployeeCode(formData.employeeId) || null,
             firstName: firstName || null,
             lastName: lastName || null,
             nickName: formData.nickName || null,
@@ -1283,7 +1287,7 @@ class OnboardingService extends BaseService {
                 });
 
                 if (existingEmployeeByEmail?.employeeCode) {
-                    formData.employeeId = existingEmployeeByEmail.employeeCode;
+                    formData.employeeId = normalizeEmployeeCode(existingEmployeeByEmail.employeeCode);
                 }
             }
 
@@ -1291,7 +1295,8 @@ class OnboardingService extends BaseService {
                 formData.employeeId = await this.getNextEmployeeId();
             }
 
-            const candidateEmployeeId = String(formData.employeeId || "").trim();
+            const candidateEmployeeId = normalizeEmployeeCode(formData.employeeId);
+            formData.employeeId = candidateEmployeeId;
             if (candidateEmployeeId) {
                 const duplicate = await db.Employee.findOne({
                     where: { employeeCode: candidateEmployeeId },
@@ -1591,15 +1596,35 @@ class OnboardingService extends BaseService {
                     .trim()
                     .toLowerCase();
 
+                const personalEmail = String(formData.personalEmail || personal.email || "")
+                    .trim()
+                    .toLowerCase();
+
                 let existingEmployee = await db.Employee.findOne({
                     where: { email: officialEmail },
                     transaction,
                     paranoid: false,
                 });
 
+                if (!existingEmployee && personalEmail) {
+                    existingEmployee = await db.Employee.findOne({
+                        where: { email: personalEmail },
+                        transaction,
+                        paranoid: false,
+                    });
+                }
+
+                if (!existingEmployee && personal.fullName) {
+                    existingEmployee = await db.Employee.findOne({
+                        where: { fullName: String(personal.fullName).trim() },
+                        transaction,
+                        paranoid: false,
+                    });
+                }
+
                 const employeeCode = existingEmployee?.employeeCode
-                    ? String(existingEmployee.employeeCode).trim()
-                    : String(formData.employeeId || "").trim();
+                    ? normalizeEmployeeCode(existingEmployee.employeeCode)
+                    : normalizeEmployeeCode(formData.employeeId);
 
                 const [skills, softwares, languages, references, docs] = await Promise.all([
                     db.CifSkill.findAll({ where: { cifid }, transaction }),
@@ -1659,7 +1684,7 @@ class OnboardingService extends BaseService {
                 await this.ensureEmployeeUserRecord({
                     email: officialEmail,
                     fullName: fullName || personal.fullName || "Employee",
-                    employeeCode: employeeCode || existingEmployee?.employeeCode || "",
+                    employeeCode: employeeCode || normalizeEmployeeCode(existingEmployee?.employeeCode) || "",
                     phone: String(formData.officePhone || formData.personalPhone || personal.phoneNumber || "").trim() || null,
                     erpRole: formData.erpRole || "TEAM_MEMBER",
                     transaction,
@@ -1683,7 +1708,7 @@ class OnboardingService extends BaseService {
     }
 
     async getRecordByEmployeeCode(employeeCode) {
-        const normalizedEmployeeCode = String(employeeCode || "").trim();
+        const normalizedEmployeeCode = normalizeEmployeeCode(employeeCode);
         if (!normalizedEmployeeCode) {
             return null;
         }
@@ -1708,7 +1733,7 @@ class OnboardingService extends BaseService {
             ];
 
             return candidateValues.some((value) =>
-                String(value || "").trim().toUpperCase() === normalizedEmployeeCode.toUpperCase()
+                normalizeEmployeeCode(value)?.toUpperCase() === normalizedEmployeeCode.toUpperCase()
             );
         });
 

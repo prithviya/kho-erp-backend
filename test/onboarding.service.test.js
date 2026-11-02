@@ -241,7 +241,7 @@ test('ensureEmployeeUserRecord creates a user with a random password for the map
     assert.equal(result.user.id, 77);
     assert.equal(createdUsers.length, 1);
     assert.equal(createdUsers[0].email, 'manager@example.com');
-    assert.equal(createdUsers[0].employeeRecord, 'KHO-025');
+    assert.equal(createdUsers[0].employeeRecord, 'KHO025');
     assert.equal(createdUsers[0].username, 'manager');
     assert.equal(createdLinks[0].roleId, 9);
     assert.notEqual(createdUsers[0].password, '');

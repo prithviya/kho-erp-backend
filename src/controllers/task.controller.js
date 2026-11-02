@@ -33,6 +33,6 @@ exports.updateTaskStatus = asyncHandler(async (req, res) => {
 });
 
 exports.deleteTask = asyncHandler(async (req, res) => {
-    await taskService.deleteTask(req.params.id);
+    await taskService.deleteTask(req.params.id, req.user);
     return ApiResponse.success(res, "Task deleted successfully.");
 });
