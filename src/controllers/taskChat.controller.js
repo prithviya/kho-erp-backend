@@ -10,7 +10,7 @@ exports.listMessages = asyncHandler(async (req, res) => {
 exports.createMessage = asyncHandler(async (req, res) => {
     const attachments = (req.files || []).map((file) => ({
         name: file.originalname,
-        url: `/uploads/task-chat/${file.filename}`,
+        url: `/uploads/task-chat/${req.taskProjectId}/${file.filename}`,
         mimeType: file.mimetype,
         size: file.size
     }));
@@ -30,7 +30,7 @@ exports.createMessage = asyncHandler(async (req, res) => {
 exports.updateMessage = asyncHandler(async (req, res) => {
     const newAttachments = (req.files || []).map((file) => ({
         name: file.originalname,
-        url: `/uploads/task-chat/${file.filename}`,
+        url: `/uploads/task-chat/${req.taskProjectId}/${file.filename}`,
         mimeType: file.mimetype,
         size: file.size
     }));

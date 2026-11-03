@@ -87,6 +87,10 @@ const permissionedRoutes = [
         ["tasks", "task_board", "task_schedule", "assign_board"]
             .map((moduleCode) => `${moduleCode}.${action === "edit" || action === "delete" ? "create" : action}`)
     ), "./taskChat.routes"],
+    ["/project-library", (req, action) => (
+        ["tasks", "task_board", "task_schedule", "assign_board", "project_details", "project_onboard"]
+            .map((moduleCode) => `${moduleCode}.${action}`)
+    ), "./projectLibrary.routes"],
     ["/project-chat", (req, action) => (
         ["project_details", "project_onboard"]
             .map((moduleCode) => `${moduleCode}.${action}`)

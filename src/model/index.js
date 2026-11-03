@@ -102,6 +102,8 @@ db.Recruitment = require("./recruitment.model")( sequelize, DataTypes );
 db.Opening = require("./opening.model")( sequelize, DataTypes );
 db.ProjectOnboard = require("./projectOnboard.model")( sequelize, DataTypes );
 db.ProjectAssignment = require("./projectAssignment.model")( sequelize, DataTypes );
+db.ProjectLibraryFolder = require("./projectLibraryFolder.model")( sequelize, DataTypes );
+db.ProjectLibraryFile = require("./projectLibraryFile.model")( sequelize, DataTypes );
 db.Task = require("./task.model")( sequelize, DataTypes );
 db.TaskActivity = require("./taskActivity.model")( sequelize, DataTypes );
 db.TaskChatMessage = require("./taskChatMessage.model")( sequelize, DataTypes );
@@ -291,6 +293,36 @@ db.ProjectOnboard.hasMany(db.ProjectAssignment, {
 db.ProjectAssignment.belongsTo(db.ProjectOnboard, {
     foreignKey: "projectOnboardId",
     as: "project",
+});
+
+db.ProjectOnboard.hasMany(db.ProjectLibraryFolder, {
+    foreignKey: "projectOnboardId",
+    as: "libraryFolders",
+});
+
+db.ProjectLibraryFolder.belongsTo(db.ProjectOnboard, {
+    foreignKey: "projectOnboardId",
+    as: "project",
+});
+
+db.ProjectOnboard.hasMany(db.ProjectLibraryFile, {
+    foreignKey: "projectOnboardId",
+    as: "libraryFiles",
+});
+
+db.ProjectLibraryFile.belongsTo(db.ProjectOnboard, {
+    foreignKey: "projectOnboardId",
+    as: "project",
+});
+
+db.ProjectLibraryFolder.hasMany(db.ProjectLibraryFile, {
+    foreignKey: "folderId",
+    as: "files",
+});
+
+db.ProjectLibraryFile.belongsTo(db.ProjectLibraryFolder, {
+    foreignKey: "folderId",
+    as: "folder",
 });
 
 // Project Assignment -> Assignee

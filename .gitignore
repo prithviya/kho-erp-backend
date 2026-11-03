@@ -8,6 +8,7 @@ __pycache__/
 
 node_modules/
 .env
+private/project-library/
 logs/
 src/logs/
 # Distribution / packaging
