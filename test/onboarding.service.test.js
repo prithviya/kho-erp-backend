@@ -10,15 +10,32 @@ const original = {
   CifAcademicFindOne: db.CifAcademic.findOne,
   CifExperienceFindOne: db.CifExperience.findOne,
   DepartmentFindOne: db.Department.findOne,
+  EmployeeFindAll: db.Employee.findAll,
   OnboardingFindOne: db.Onboarding.findOne,
+  OnboardingFindAll: db.Onboarding.findAll,
   OnboardingInfoCreate: db.OnboardingInfo.create,
   OnboardingInfoFindByPk: db.OnboardingInfo.findByPk,
+  OnboardingInfoFindAll: db.OnboardingInfo.findAll,
 };
 
 const service = (() => {
   delete require.cache[servicePath];
   return require(servicePath);
 })();
+
+test('getNextEmployeeId returns the next KHO ID without a hyphen', async () => {
+  db.Employee.findAll = async () => [{ employeeCode: 'KHO-042' }];
+  db.Onboarding.findAll = async () => [];
+  db.OnboardingInfo.findAll = async () => [];
+
+  try {
+    assert.equal(await service.getNextEmployeeId(), 'KHO043');
+  } finally {
+    db.Employee.findAll = original.EmployeeFindAll;
+    db.Onboarding.findAll = original.OnboardingFindAll;
+    db.OnboardingInfo.findAll = original.OnboardingInfoFindAll;
+  }
+});
 
 test('persistLinkedOnboardingSections creates valid fallback rows when candidate history is missing', async () => {
   const fakePersonal = { city: 'Coimbatore', fullName: 'Nandhu' };

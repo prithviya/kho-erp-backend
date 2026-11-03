@@ -1,5 +1,12 @@
 const winston = require("winston");
 require("winston-daily-rotate-file");
+const fs = require("fs");
+const path = require("path");
+
+const logDirectory = path.resolve(__dirname, "..", "logs");
+fs.mkdirSync(path.join(logDirectory, "application"), { recursive: true });
+fs.mkdirSync(path.join(logDirectory, "error"), { recursive: true });
+
 const logFormat = winston.format.combine(
     winston.format.timestamp({
         format: "YYYY-MM-DD HH:mm:ss"
@@ -10,12 +17,12 @@ const logFormat = winston.format.combine(
     })
 );
 const applicationTransport = new winston.transports.DailyRotateFile({
-    filename: "src/logs/application/application-%DATE%.log",
+    filename: path.join(logDirectory, "application", "application-%DATE%.log"),
     datePattern: "YYYY-MM-DD",
     maxFiles: "30d"
 });
 const errorTransport = new winston.transports.DailyRotateFile({
-    filename: "src/logs/error/error-%DATE%.log",
+    filename: path.join(logDirectory, "error", "error-%DATE%.log"),
     datePattern: "YYYY-MM-DD",
     level: "error",
     maxFiles: "30d"
