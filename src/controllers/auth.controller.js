@@ -3,6 +3,7 @@ const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
 const logger = require("../helpers/logger");
 const passwordService = require("../services/password.service");
+const activityLogService = require("../services/activityLog.service");
 const UAParser = require("ua-parser-js");
 
 const ACCESS_COOKIE_NAME = "erp_access_token";
@@ -50,9 +51,36 @@ exports.login = asyncHandler(async (req, res) => {
         ipAddress: req.ip
     };
     logger.info(`Logging in user: ${req.body.email} from IP: ${sessionInfo.ipAddress}`);
-    const result = await authService.login(req.body, sessionInfo);
+    let result;
+    try {
+        result = await authService.login(req.body, sessionInfo);
+    } catch (error) {
+        const identifier = String(req.body?.identifier || req.body?.employeeCode || req.body?.email || "").trim().slice(0, 120);
+        await activityLogService.log({
+            actorName: identifier || "Unknown",
+            module: "auth",
+            action: "LOGIN_FAILED",
+            description: `Failed login attempt for "${identifier}"`,
+            method: req.method,
+            route: "/auth/login",
+            statusCode: error.status || 401,
+            ipAddress: req.ip
+        });
+        throw error;
+    }
     setAuthCookies(res, result.accessToken, result.refreshToken);
     logger.info(`User logged in: ${result.user.email}`);
+    await activityLogService.log({
+        actorId: result.user.id,
+        module: "auth",
+        action: "LOGIN",
+        description: `Logged in from ${sessionInfo.browser || "browser"} on ${sessionInfo.os || "unknown OS"}`,
+        method: req.method,
+        route: "/auth/login",
+        statusCode: 200,
+        ipAddress: sessionInfo.ipAddress,
+        metadata: { device: sessionInfo.deviceName, browser: sessionInfo.browser, os: sessionInfo.os }
+    });
     return ApiResponse.success(
         res,
         "Login successful.",
@@ -82,6 +110,16 @@ exports.logout = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body.refreshToken;
     await authService.logout(refreshToken);
     clearAuthCookies(res);
+    await activityLogService.log({
+        actorId: req.user.id,
+        module: "auth",
+        action: "LOGOUT",
+        description: "Logged out",
+        method: req.method,
+        route: "/auth/logout",
+        statusCode: 200,
+        ipAddress: req.ip
+    });
     logger.info(`User logged out: ${req.user.email}`);
     return ApiResponse.success(
         res,
@@ -93,6 +131,16 @@ exports.logoutAll = asyncHandler(async (req, res) => {
     logger.info(`Logging out user from all devices: ${req.user.email}`);
     await authService.logoutAll(req.user.id);
     clearAuthCookies(res);
+    await activityLogService.log({
+        actorId: req.user.id,
+        module: "auth",
+        action: "LOGOUT",
+        description: "Logged out from all devices",
+        method: req.method,
+        route: "/auth/logout-all",
+        statusCode: 200,
+        ipAddress: req.ip
+    });
     logger.info(`User logged out from all devices: ${req.user.email}`);
     return ApiResponse.success(
         res,

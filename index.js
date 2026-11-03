@@ -59,6 +59,7 @@ app.use("/api", limiter);
  * Routes
  */ 
 const routes = require("./src/routes");
+app.use("/api", require("./src/middleware/activityLog.middleware"));
 app.use("/api", routes);
 /**
  * Health Check

@@ -106,6 +106,7 @@ db.ProjectLibraryFolder = require("./projectLibraryFolder.model")( sequelize, Da
 db.ProjectLibraryFile = require("./projectLibraryFile.model")( sequelize, DataTypes );
 db.Task = require("./task.model")( sequelize, DataTypes );
 db.TaskActivity = require("./taskActivity.model")( sequelize, DataTypes );
+db.ActivityLog = require("./activityLog.model")( sequelize, DataTypes );
 db.TaskChatMessage = require("./taskChatMessage.model")( sequelize, DataTypes );
 db.ProjectChatMessage = require("./projectChatMessage.model")( sequelize, DataTypes );
 db.Notification = require("./notification.model")( sequelize, DataTypes );

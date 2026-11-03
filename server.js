@@ -20,6 +20,12 @@ app.use(requestLogger);
             logger.info("✅ Static seed data ensured");
         }
 
+        const activityLogService = require("./src/services/activityLog.service");
+        activityLogService.purgeExpired().catch((error) => logger.error(`Activity log cleanup failed: ${error.message}`));
+        setInterval(() => {
+            activityLogService.purgeExpired().catch((error) => logger.error(`Activity log cleanup failed: ${error.message}`));
+        }, 24 * 60 * 60 * 1000).unref();
+
         server.listen(PORT, () => {
             logger.info("================================");
             logger.info(`🚀 ERP API Running on Port ${PORT}`);
