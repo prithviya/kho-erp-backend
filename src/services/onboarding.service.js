@@ -29,10 +29,11 @@ class OnboardingService extends BaseService {
             return maxValue;
         };
 
-        const [employees, onboardings, onboardingInfos] = await Promise.all([
+        const [employees, onboardings, onboardingInfos, onboardingRecords] = await Promise.all([
             db.Employee.findAll({ attributes: ["employeeCode"], paranoid: false }),
             db.Onboarding.findAll({ attributes: ["employeeCode"], paranoid: false }),
             db.OnboardingInfo.findAll({ attributes: ["employeeId"], paranoid: false }),
+            db.OnboardingRecord.findAll({ attributes: ["formData"], paranoid: false }),
         ]);
 
         const getMaxKho = (rows, fieldName) =>
@@ -41,14 +42,17 @@ class OnboardingService extends BaseService {
                 0
             );
 
-        // Primary source: employee master. Fallback to onboarding snapshots only when no employee code exists.
-        let maxKho = getMaxKho(employees, "employeeCode");
-        if (maxKho === 0) {
-            maxKho = Math.max(
-                getMaxKho(onboardings, "employeeCode"),
-                getMaxKho(onboardingInfos, "employeeId")
-            );
-        }
+        const maxFromOnboardingRecords = onboardingRecords.reduce((maxValue, record) => {
+            const formData = this.parseJsonColumn(record.formData);
+            return collectMaxFromCode(formData.employeeId, maxValue);
+        }, 0);
+
+        const maxKho = Math.max(
+            getMaxKho(employees, "employeeCode"),
+            getMaxKho(onboardings, "employeeCode"),
+            getMaxKho(onboardingInfos, "employeeId"),
+            maxFromOnboardingRecords
+        );
 
         const nextNumber = maxKho + 1;
         return `KHO${String(nextNumber).padStart(3, "0")}`;
@@ -58,6 +62,12 @@ class OnboardingService extends BaseService {
         return String(status || "DRAFT").toUpperCase() === "FINAL"
             ? "FINAL"
             : "DRAFT";
+    }
+
+    resolveFinalEmployeeCode(assignedCode, existingEmployee) {
+        return normalizeEmployeeCode(
+            assignedCode || existingEmployee?.employeeCode
+        );
     }
 
     pickValue(newValue, oldValue) {
@@ -1274,23 +1284,6 @@ class OnboardingService extends BaseService {
         const formData = payload?.formData || {};
 
         if (status === "FINAL") {
-            const officialEmail = String(
-                formData.officialEmail || formData.personalEmail || ""
-            )
-                .trim()
-                .toLowerCase();
-
-            if (officialEmail) {
-                const existingEmployeeByEmail = await db.Employee.findOne({
-                    where: { email: officialEmail },
-                    paranoid: false,
-                });
-
-                if (existingEmployeeByEmail?.employeeCode) {
-                    formData.employeeId = normalizeEmployeeCode(existingEmployeeByEmail.employeeCode);
-                }
-            }
-
             if (!String(formData.employeeId || "").trim()) {
                 formData.employeeId = await this.getNextEmployeeId();
             }
@@ -1622,9 +1615,10 @@ class OnboardingService extends BaseService {
                     });
                 }
 
-                const employeeCode = existingEmployee?.employeeCode
-                    ? normalizeEmployeeCode(existingEmployee.employeeCode)
-                    : normalizeEmployeeCode(formData.employeeId);
+                const employeeCode = this.resolveFinalEmployeeCode(
+                    formData.employeeId,
+                    existingEmployee
+                );
 
                 const [skills, softwares, languages, references, docs] = await Promise.all([
                     db.CifSkill.findAll({ where: { cifid }, transaction }),

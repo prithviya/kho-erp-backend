@@ -13,6 +13,7 @@ const original = {
   EmployeeFindAll: db.Employee.findAll,
   OnboardingFindOne: db.Onboarding.findOne,
   OnboardingFindAll: db.Onboarding.findAll,
+  OnboardingRecordFindAll: db.OnboardingRecord.findAll,
   OnboardingInfoCreate: db.OnboardingInfo.create,
   OnboardingInfoFindByPk: db.OnboardingInfo.findByPk,
   OnboardingInfoFindAll: db.OnboardingInfo.findAll,
@@ -27,6 +28,7 @@ test('getNextEmployeeId returns the next KHO ID without a hyphen', async () => {
   db.Employee.findAll = async () => [{ employeeCode: 'KHO-042' }];
   db.Onboarding.findAll = async () => [];
   db.OnboardingInfo.findAll = async () => [];
+  db.OnboardingRecord.findAll = async () => [];
 
   try {
     assert.equal(await service.getNextEmployeeId(), 'KHO043');
@@ -34,7 +36,31 @@ test('getNextEmployeeId returns the next KHO ID without a hyphen', async () => {
     db.Employee.findAll = original.EmployeeFindAll;
     db.Onboarding.findAll = original.OnboardingFindAll;
     db.OnboardingInfo.findAll = original.OnboardingInfoFindAll;
+    db.OnboardingRecord.findAll = original.OnboardingRecordFindAll;
   }
+});
+
+test('getNextEmployeeId skips codes already assigned to onboarding drafts', async () => {
+  db.Employee.findAll = async () => [{ employeeCode: 'KHO043' }];
+  db.Onboarding.findAll = async () => [{ employeeCode: 'KHO-045' }];
+  db.OnboardingInfo.findAll = async () => [{ employeeId: 'KHO044' }];
+  db.OnboardingRecord.findAll = async () => [{ formData: '{"employeeId":"KHO046"}' }];
+
+  try {
+    assert.equal(await service.getNextEmployeeId(), 'KHO047');
+  } finally {
+    db.Employee.findAll = original.EmployeeFindAll;
+    db.Onboarding.findAll = original.OnboardingFindAll;
+    db.OnboardingInfo.findAll = original.OnboardingInfoFindAll;
+    db.OnboardingRecord.findAll = original.OnboardingRecordFindAll;
+  }
+});
+
+test('final onboarding keeps the employee ID assigned in the form', () => {
+  assert.equal(
+    service.resolveFinalEmployeeCode('KHO046', { employeeCode: 'KHO043' }),
+    'KHO046'
+  );
 });
 
 test('persistLinkedOnboardingSections creates valid fallback rows when candidate history is missing', async () => {
