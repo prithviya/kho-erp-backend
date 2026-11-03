@@ -162,7 +162,7 @@ test('persistLinkedOnboardingSections keeps existing academic and experience ids
   assert.equal(createdOnboardingInfo[0].academicid, 10);
 });
 
-test('isEmployeeIdDuplicate returns false when the duplicate employee belongs to the same candidate email', async () => {
+test('isEmployeeIdDuplicate allows an employee code linked to the same candidate personal email', async () => {
   const duplicateEmployee = {
     employeeCode: 'KHO-003',
     email: 'nandhu@example.com',
@@ -174,13 +174,25 @@ test('isEmployeeIdDuplicate returns false when the duplicate employee belongs to
 
   const result = service.isEmployeeIdDuplicate({
     candidateEmployeeId: 'KHO-003',
-    currentOfficialEmail: 'nandhu@example.com',
+    currentPersonalEmail: 'nandhu@example.com',
     cifid: 15,
     duplicateEmployee,
     duplicateOnboarding,
   });
 
   assert.equal(result, false);
+});
+
+test('isEmployeeIdDuplicate rejects a shared official email when the code belongs to another employee', () => {
+  const result = service.isEmployeeIdDuplicate({
+    candidateEmployeeId: 'KHO-010',
+    currentPersonalEmail: 'sudarsan.personal@example.com',
+    cifid: 14,
+    duplicateEmployee: { employeeCode: 'KHO010', email: 'shared@company.com' },
+    duplicateOnboarding: { cifid: 14, employeeId: 'KHO010' },
+  });
+
+  assert.equal(result, true);
 });
 
 test('validateFinalFormData ignores UI-optional fields like officePhone, UAN, and icebreaker data', () => {
