@@ -1253,6 +1253,42 @@ class OnboardingService extends BaseService {
         }
     }
 
+    // Mirrors the duplicate sources saveRecord() checks against on FINAL submit
+    // (Employee + OnboardingInfo), so the UI can flag a taken Employee ID as soon
+    // as the Personal tab is filled instead of only discovering it on Final Submit.
+    async getClaimedEmployeeCodes() {
+        const [employees, onboardingInfos] = await Promise.all([
+            db.Employee.findAll({
+                attributes: ["id", "employeeCode", "email"],
+                paranoid: false,
+            }),
+            db.OnboardingInfo.findAll({
+                attributes: ["employeeId", "officialemail", "cifid"],
+                paranoid: false,
+            }),
+        ]);
+
+        const fromEmployees = employees
+            .filter((employee) => employee.employeeCode)
+            .map((employee) => ({
+                employeeCode: employee.employeeCode,
+                email: employee.email || "",
+                cifid: null,
+                employeeRowId: employee.id,
+            }));
+
+        const fromOnboarding = onboardingInfos
+            .filter((info) => info.employeeId)
+            .map((info) => ({
+                employeeCode: info.employeeId,
+                email: info.officialemail || "",
+                cifid: info.cifid,
+                employeeRowId: null,
+            }));
+
+        return [...fromEmployees, ...fromOnboarding];
+    }
+
     isEmployeeIdDuplicate({ candidateEmployeeId, currentOfficialEmail, cifid, duplicateEmployee, duplicateOnboarding }) {
         if (!candidateEmployeeId) {
             return false;

@@ -46,6 +46,7 @@ router.get("/record/employee-code/:employeeCode", authMiddleware, requireAnyRole
 router.get("/record/:cifid", authMiddleware, requireAnyRole(["hr"]), controller.getRecordByCifId);
 router.get("/record/candidate/:candidateId", authMiddleware, requireAnyRole(["hr"]), controller.getRecordByCifId);
 router.get("/next-employee-id", authMiddleware, requireAnyRole(["hr"]), controller.getNextEmployeeId);
+router.get("/employee-codes", authMiddleware, requireAnyRole(["hr"]), controller.getClaimedEmployeeCodes);
 router.post("/upload-document", authMiddleware, requireAnyRole(["hr"]), upload.single("document"), controller.uploadDocument);
 
 router.post("/", authMiddleware, requireAnyRole(["hr"]), controller.create);

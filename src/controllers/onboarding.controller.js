@@ -90,6 +90,16 @@ exports.getAllRecords = asyncHandler(async (_req, res) => {
     );
 });
 
+exports.getClaimedEmployeeCodes = asyncHandler(async (_req, res) => {
+    const codes = await onboarding.getClaimedEmployeeCodes();
+
+    return ApiResponse.success(
+        res,
+        "Claimed employee codes fetched successfully.",
+        codes
+    );
+});
+
 exports.getNextEmployeeId = asyncHandler(async (_req, res) => {
     const employeeId = await onboarding.getNextEmployeeId();
 
