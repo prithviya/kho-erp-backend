@@ -1294,24 +1294,28 @@ class OnboardingService extends BaseService {
             return false;
         }
 
-        const normalizedCurrentEmail = String(currentOfficialEmail || "").trim().toLowerCase();
+        const normalizedPersonalEmail = String(currentPersonalEmail || "").trim().toLowerCase();
+        const normalizedFullName = String(currentFullName || "").trim().toLowerCase();
+        const sameCandidateEmployeeName = Boolean(normalizedFullName)
+            && String(duplicateEmployee?.fullName || "").trim().toLowerCase() === normalizedFullName;
+        const sameCandidateEmployeeCif = Number(
+            duplicateEmployee?.cifid || duplicateEmployee?.candidateId || duplicateEmployee?.cifId
+        ) === Number(cifid);
+        const duplicateEmployeeMatchesCandidate = !duplicateEmployee
+            || (
+                (normalizedPersonalEmail
+                    && String(duplicateEmployee.email || "").trim().toLowerCase() === normalizedPersonalEmail)
+                || sameCandidateEmployeeCif
+                || (
+                    duplicateOnboarding
+                    && Number(duplicateOnboarding.cifid) === Number(cifid)
+                    && sameCandidateEmployeeName
+                )
+            );
+        const duplicateOnboardingMatchesCandidate = !duplicateOnboarding
+            || Number(duplicateOnboarding.cifid) === Number(cifid);
 
-        if (duplicateEmployee) {
-            const sameEmployeeEmail = String(duplicateEmployee.email || "").trim().toLowerCase() === normalizedCurrentEmail;
-            const sameCifId = Number(duplicateEmployee.cifid || duplicateEmployee.candidateId || duplicateEmployee.cifId) === Number(cifid);
-            if (sameEmployeeEmail || sameCifId) {
-                return false;
-            }
-        }
-
-        if (duplicateOnboarding) {
-            const sameCandidate = Number(duplicateOnboarding.cifid) === Number(cifid);
-            if (sameCandidate) {
-                return false;
-            }
-        }
-
-        return true;
+        return !(duplicateEmployeeMatchesCandidate && duplicateOnboardingMatchesCandidate);
     }
 
     async saveRecord(payload) {
@@ -1339,7 +1343,8 @@ class OnboardingService extends BaseService {
 
                 const shouldRejectDuplicate = this.isEmployeeIdDuplicate({
                     candidateEmployeeId,
-                    currentOfficialEmail: formData.officialEmail || formData.personalEmail || "",
+                    currentPersonalEmail: formData.personalEmail || "",
+                    currentFullName: formData.fullName || "",
                     cifid,
                     duplicateEmployee: duplicate,
                     duplicateOnboarding,
@@ -1381,6 +1386,12 @@ class OnboardingService extends BaseService {
                 if (!personal) {
                     throw new Error("CIF personal record not found.");
                 }
+                const priorOnboardingInfo = await db.OnboardingInfo.findOne({
+                    where: { cifid },
+                    attributes: ["employeeId"],
+                    transaction,
+                });
+                const priorEmployeeCode = normalizeEmployeeCode(priorOnboardingInfo?.employeeId);
 
                 const existing = await db.OnboardingRecord.findOne({
                     where: { cifid },
@@ -1629,23 +1640,21 @@ class OnboardingService extends BaseService {
                     .trim()
                     .toLowerCase();
 
-                let existingEmployee = await db.Employee.findOne({
-                    where: { email: officialEmail },
-                    transaction,
-                    paranoid: false,
-                });
+                const requestedEmployeeCode = normalizeEmployeeCode(formData.employeeId);
+                const employeeCodesToMatch = [...new Set([requestedEmployeeCode, priorEmployeeCode].filter(Boolean))];
+                let existingEmployee = null;
+                for (const code of employeeCodesToMatch) {
+                    existingEmployee = await db.Employee.findOne({
+                        where: { employeeCode: code },
+                        transaction,
+                        paranoid: false,
+                    });
+                    if (existingEmployee) break;
+                }
 
                 if (!existingEmployee && personalEmail) {
                     existingEmployee = await db.Employee.findOne({
                         where: { email: personalEmail },
-                        transaction,
-                        paranoid: false,
-                    });
-                }
-
-                if (!existingEmployee && personal.fullName) {
-                    existingEmployee = await db.Employee.findOne({
-                        where: { fullName: String(personal.fullName).trim() },
                         transaction,
                         paranoid: false,
                     });
@@ -1703,6 +1712,20 @@ class OnboardingService extends BaseService {
                         transaction,
                         paranoid: false,
                     });
+                }
+
+                const emailOwner = officialEmail
+                    ? await db.Employee.findOne({
+                        where: { email: officialEmail },
+                        transaction,
+                        paranoid: false,
+                    })
+                    : null;
+                if (emailOwner && Number(emailOwner.id) !== Number(existingEmployee?.id)) {
+                    const error = new Error("Official email is already assigned to another employee. Use a unique official email.");
+                    error.status = 409;
+                    error.code = "EMPLOYEE_EMAIL_ALREADY_EXISTS";
+                    throw error;
                 }
 
                 if (existingEmployee) {
