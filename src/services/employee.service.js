@@ -132,7 +132,23 @@ class EmployeeService {
             employeeCode: normalizeEmployeeCode(this.normalizeString(user?.employeeRecord)),
         });
 
-        return employee ? this.toResponse(employee) : null;
+        if (employee) {
+            return this.toResponse(employee);
+        }
+
+        if (user) {
+            return {
+                id: user.id,
+                fullName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || user.email || "Employee",
+                email: user.email,
+                employeeCode: normalizeEmployeeCode(user.employeeRecord) || "",
+                phone: user.phone || "",
+                jobPosition: user.roles?.[0]?.name || "Employee",
+                status: "Active",
+            };
+        }
+
+        return null;
     }
 
     async getEmployeeById(id) {

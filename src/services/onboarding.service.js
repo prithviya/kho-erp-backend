@@ -1289,7 +1289,14 @@ class OnboardingService extends BaseService {
         return [...fromEmployees, ...fromOnboarding];
     }
 
-    isEmployeeIdDuplicate({ candidateEmployeeId, currentOfficialEmail, cifid, duplicateEmployee, duplicateOnboarding }) {
+    isEmployeeIdDuplicate({
+        candidateEmployeeId,
+        currentPersonalEmail,
+        currentFullName,
+        cifid,
+        duplicateEmployee,
+        duplicateOnboarding,
+    }) {
         if (!candidateEmployeeId) {
             return false;
         }
@@ -1630,6 +1637,13 @@ class OnboardingService extends BaseService {
             }
 
             if (status === "FINAL") {
+                const priorOnboardingInfo = await db.OnboardingInfo.findOne({
+                    where: { cifid },
+                    attributes: ["employeeId"],
+                    transaction,
+                });
+                const priorEmployeeCode = normalizeEmployeeCode(priorOnboardingInfo?.employeeId);
+
                 const officialEmail = String(
                     formData.officialEmail || formData.personalEmail || personal.email
                 )
