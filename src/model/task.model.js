@@ -73,6 +73,11 @@ module.exports = (sequelize, DataTypes) => {
             createdBy: {
                 type: DataTypes.INTEGER,
                 allowNull: true
+            },
+            sortOrder: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: 0
             }
         },
         {

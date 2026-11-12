@@ -121,9 +121,18 @@ class ActivityLogService {
     async list(query = {}) {
         const page = Math.max(1, Number(query.page) || 1);
         const limit = Math.min(200, Math.max(1, Number(query.limit) || 25));
+        const sortableColumns = {
+            createdAt: "createdAt",
+            actorName: "actorName",
+            action: "action",
+            projectName: "projectName",
+            description: "description"
+        };
+        const sortColumn = sortableColumns[query.sortBy] || "createdAt";
+        const sortDirection = String(query.sortDirection || "desc").toLowerCase() === "asc" ? "ASC" : "DESC";
         const { rows, count } = await ActivityLog.findAndCountAll({
             where: this.buildWhere(query),
-            order: [["createdAt", "DESC"], ["id", "DESC"]],
+            order: [[sortColumn, sortDirection], ["id", sortDirection]],
             limit,
             offset: (page - 1) * limit
         });

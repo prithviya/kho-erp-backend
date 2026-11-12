@@ -12,9 +12,24 @@ const libraryRoot = path.resolve(
     process.env.PROJECT_LIBRARY_DIR || path.join(__dirname, "../../private/project-library")
 );
 const maxFileSize = Number(process.env.PROJECT_LIBRARY_MAX_FILE_SIZE || 100 * 1024 * 1024);
+const documentMimeTypes = new Set([
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/rtf",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "application/vnd.oasis.opendocument.presentation",
+    "text/plain",
+    "text/csv"
+]);
 const allowedFile = (file) => file.mimetype === "application/pdf"
     || (file.mimetype.startsWith("image/") && file.mimetype !== "image/svg+xml")
-    || file.mimetype.startsWith("video/");
+    || file.mimetype.startsWith("video/")
+    || documentMimeTypes.has(file.mimetype);
 
 const upload = multer({
     storage: multer.diskStorage({
@@ -28,7 +43,7 @@ const upload = multer({
         }
     }),
     fileFilter: (_req, file, callback) => {
-        if (!allowedFile(file)) return callback(new Error("Only images, videos, and PDF files are supported."));
+        if (!allowedFile(file)) return callback(new Error("This file type is not supported. Upload images, videos, or common document formats."));
         return callback(null, true);
     },
     limits: { files: 10, fileSize: maxFileSize }

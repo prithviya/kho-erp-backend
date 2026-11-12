@@ -54,6 +54,7 @@ class TaskRepository extends BaseRepository {
             where,
             include: TASK_INCLUDES,
             order: [
+                ["sortOrder", "ASC"],
                 ["status", "ASC"],
                 ["dueDate", "ASC"],
                 ["createdAt", "DESC"]

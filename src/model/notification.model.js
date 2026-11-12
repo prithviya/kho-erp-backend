@@ -6,7 +6,22 @@ module.exports = (sequelize, DataTypes) => sequelize.define(
         type: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "PROJECT_MENTION" },
         projectOnboardId: { type: DataTypes.INTEGER, allowNull: true },
         message: { type: DataTypes.TEXT, allowNull: false },
-        metadata: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },
+        metadata: {
+            type: DataTypes.JSON,
+            allowNull: false,
+            defaultValue: {},
+            get() {
+                const rawValue = this.getDataValue("metadata");
+                if (typeof rawValue === "string") {
+                    try {
+                        return JSON.parse(rawValue);
+                    } catch {
+                        return {};
+                    }
+                }
+                return rawValue || {};
+            }
+        },
         readAt: { type: DataTypes.DATE, allowNull: true }
     },
     { tableName: "notifications", timestamps: true }

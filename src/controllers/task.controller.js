@@ -36,3 +36,8 @@ exports.deleteTask = asyncHandler(async (req, res) => {
     await taskService.deleteTask(req.params.id, req.user);
     return ApiResponse.success(res, "Task deleted successfully.");
 });
+
+exports.reorderTasks = asyncHandler(async (req, res) => {
+    const result = await taskService.reorderTasks(req.body || {}, req.user);
+    return ApiResponse.success(res, "Tasks reordered successfully.", result);
+});

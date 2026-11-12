@@ -189,10 +189,13 @@ class AuthService {
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
-            phone: data.phone,
-            profileImage: data.profileImage
+            phone: data.phone
         });
         logger.info(`Profile updated successfully for user ID: ${userId}`);
+        return await authRepository.getProfile(userId);
+    }
+    async updateProfileImage(userId, profileImage) {
+        await authRepository.updateProfile(userId, { profileImage });
         return await authRepository.getProfile(userId);
     }
     // Get all active sessions for a user

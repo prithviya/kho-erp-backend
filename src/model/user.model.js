@@ -33,6 +33,10 @@ module.exports = (sequelize, DataTypes) => {
             employeeRecord: {
                 type: DataTypes.STRING(255),
             },
+            profileImage: {
+                type: DataTypes.STRING(512),
+                allowNull: true,
+            },
             password: {
                 type: DataTypes.STRING,
                 allowNull: false,

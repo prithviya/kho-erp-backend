@@ -73,15 +73,31 @@ class ProjectOnboardService {
         const vendors = vendorIds.length ? await Vendor.findAll({ where: { vendorId: vendorIds } }) : [];
         const vendorMap = new Map(vendors.map((vendor) => [Number(vendor.vendorId), vendor.toJSON()]));
 
-        return records.map((project) => ({
-            ...project,
-            spocUsers: this.parseIdArray(project.spocIds).map((id) => userMap.get(Number(id))).filter(Boolean),
-            reportingHeadUser: userMap.get(Number(project.reportingHeadId))
-                || this.parseIdArray(project.projectManagerIds).map((id) => userMap.get(Number(id))).find(Boolean)
-                || null,
-            assignedUsers: this.parseIdArray(project.assignedToIds).map((id) => userMap.get(Number(id))).filter(Boolean)
-            , assignedVendorUsers: this.parseIdArray(project.assignedVendorIds).map((id) => vendorMap.get(Number(id))).filter(Boolean)
-        }));
+        return records.map((project) => {
+            const reportingHeadIds = [
+                ...this.parseIdArray(project.projectManagerIds),
+                ...(project.reportingHeadId ? [project.reportingHeadId] : [])
+            ];
+            const seenHeadIds = new Set();
+            const reportingHeadUsers = reportingHeadIds
+                .map((id) => userMap.get(Number(id)))
+                .filter((u) => {
+                    if (!u || seenHeadIds.has(Number(u.id))) return false;
+                    seenHeadIds.add(Number(u.id));
+                    return true;
+                });
+
+            return {
+                ...project,
+                spocUsers: this.parseIdArray(project.spocIds).map((id) => userMap.get(Number(id))).filter(Boolean),
+                reportingHeadUser: userMap.get(Number(project.reportingHeadId))
+                    || this.parseIdArray(project.projectManagerIds).map((id) => userMap.get(Number(id))).find(Boolean)
+                    || null,
+                reportingHeadUsers,
+                assignedUsers: this.parseIdArray(project.assignedToIds).map((id) => userMap.get(Number(id))).filter(Boolean),
+                assignedVendorUsers: this.parseIdArray(project.assignedVendorIds).map((id) => vendorMap.get(Number(id))).filter(Boolean)
+            };
+        });
     }
 
     async createProjectOnboard(data, userId) {
@@ -118,7 +134,13 @@ class ProjectOnboardService {
     async listProjectOnboards(actor = {}) {
         const projects = await projectOnboardRepository.listAll();
         const mapped = await this.attachAssignmentUsers(projects.map((project) => this.mapProjectAssignmentFields(project)));
-        if (actor.isSuperAdmin || actor.roleSet?.has("manager")) return mapped;
+        const roleSet = actor.roleSet;
+        const canViewAllProjects = actor.isSuperAdmin
+            || roleSet?.has("manager")
+            || roleSet?.has("admin")
+            || roleSet?.has("administrator")
+            || roleSet?.has("systemadmin");
+        if (canViewAllProjects) return mapped;
 
         const userId = Number(actor.id);
         return mapped.filter((project) => [

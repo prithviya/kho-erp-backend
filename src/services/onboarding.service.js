@@ -3,8 +3,9 @@ const bcrypt = require("bcrypt");
 const BaseService = require("./base.service");
 const repository = require("../repository/onboarding.repository");
 const db = require("../model");
-const { QueryTypes } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 const { normalizeEmployeeCode } = require("../helpers/employeeCode");
+const path = require("path");
 
 class OnboardingService extends BaseService {
     constructor() {
@@ -2189,6 +2190,108 @@ class OnboardingService extends BaseService {
     async getAllRecords() {
         return db.OnboardingRecord.findAll({
             order: [["updatedAt", "DESC"]],
+        });
+    }
+
+    resolveOnboardingDocumentStoredName(document) {
+        const storedName = String(document?.storedName || "").trim();
+        const fileUrl = String(document?.fileUrl || document?.file_url || "").trim();
+        let pathname = "";
+        if (fileUrl) {
+            try {
+                pathname = new URL(fileUrl, "http://localhost").pathname;
+            } catch {
+                return "";
+            }
+        }
+        const fromUrl = pathname.startsWith("/uploads/onboarding-documents/")
+            ? pathname.slice("/uploads/onboarding-documents/".length)
+            : "";
+        const filename = storedName || fromUrl;
+        if (!filename || filename !== path.basename(filename) || !/^[a-zA-Z0-9._-]+$/.test(filename)) {
+            return "";
+        }
+        return filename;
+    }
+
+    async getOnboardingDocuments() {
+        const records = await db.OnboardingRecord.findAll({
+            attributes: ["cifid", "status", "formData", "updatedAt"],
+            order: [["updatedAt", "DESC"]],
+        });
+        return records.flatMap((record) => {
+            const formData = this.parseJsonColumn(record.formData);
+            const documents = this.sanitizeDocumentsForSnapshot(formData.documents);
+            const employeeName = this.normalizeFullName(formData);
+            return documents.map((document, index) => {
+                const storedName = this.resolveOnboardingDocumentStoredName(document);
+                return {
+                    id: `${record.cifid}-${index}`,
+                    cifid: Number(record.cifid),
+                    documentIndex: index,
+                    employeeName: employeeName || `Candidate ${record.cifid}`,
+                    employeeId: String(formData.employeeId || ""),
+                    status: record.status,
+                    documentType: document.documentType || "Document",
+                    fileName: document.fileName,
+                    fileUrl: document.fileUrl,
+                    storedName,
+                    archiveAvailable: Boolean(storedName),
+                    updatedAt: record.updatedAt,
+                };
+            });
+        }).filter((document) => document.fileUrl || document.storedName);
+    }
+
+    async getOnboardingDocumentArchiveFiles(selections) {
+        if (!Array.isArray(selections) || !selections.length || selections.length > 100) {
+            const error = new Error("Select between 1 and 100 onboarding documents to download.");
+            error.status = 400;
+            throw error;
+        }
+
+        const normalizedSelections = selections.map((selection) => ({
+            cifid: Number(selection?.cifid),
+            documentIndex: Number(selection?.documentIndex),
+        }));
+        if (normalizedSelections.some(({ cifid, documentIndex }) => (
+            !Number.isInteger(cifid) || cifid < 1
+            || !Number.isInteger(documentIndex) || documentIndex < 0
+        ))) {
+            const error = new Error("One or more selected onboarding documents are invalid.");
+            error.status = 400;
+            throw error;
+        }
+
+        const cifids = [...new Set(normalizedSelections.map(({ cifid }) => cifid))];
+        const records = await db.OnboardingRecord.findAll({
+            where: { cifid: { [Op.in]: cifids } },
+            attributes: ["cifid", "formData"],
+        });
+        const recordsByCifid = new Map(records.map((record) => [
+            Number(record.cifid),
+            this.parseJsonColumn(record.formData),
+        ]));
+        const uploadsRoot = path.resolve(
+            process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"),
+            "onboarding-documents"
+        );
+
+        return normalizedSelections.map(({ cifid, documentIndex }) => {
+            const formData = recordsByCifid.get(cifid);
+            const document = this.sanitizeDocumentsForSnapshot(formData?.documents)[documentIndex];
+            const storedName = this.resolveOnboardingDocumentStoredName(document);
+            if (!storedName) {
+                const error = new Error("A selected document is no longer available for bulk download.");
+                error.status = 404;
+                throw error;
+            }
+            return {
+                path: path.join(uploadsRoot, storedName),
+                name: document.fileName,
+                employeeName: this.normalizeFullName(formData) || `Candidate ${cifid}`,
+                documentType: document.documentType || "Document",
+            };
         });
     }
 

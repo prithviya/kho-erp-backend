@@ -5,6 +5,9 @@ const logger = require("../helpers/logger");
 const passwordService = require("../services/password.service");
 const activityLogService = require("../services/activityLog.service");
 const UAParser = require("ua-parser-js");
+const fs = require("fs/promises");
+const path = require("path");
+const { randomUUID } = require("crypto");
 
 const ACCESS_COOKIE_NAME = "erp_access_token";
 const REFRESH_COOKIE_NAME = "erp_refresh_token";
@@ -208,6 +211,71 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         user
     );
 
+});
+
+exports.uploadProfileImage = asyncHandler(async (req, res) => {
+    if (!req.file) {
+        return ApiResponse.error(res, "An image file is required.", null, 400);
+    }
+
+    const { buffer } = req.file;
+    let extension;
+    if (
+        buffer.length >= 3 &&
+        buffer[0] === 0xff &&
+        buffer[1] === 0xd8 &&
+        buffer[2] === 0xff
+    ) {
+        extension = "jpg";
+    } else if (
+        buffer.length >= 8 &&
+        buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    ) {
+        extension = "png";
+    } else if (
+        buffer.length >= 12 &&
+        buffer.toString("ascii", 0, 4) === "RIFF" &&
+        buffer.toString("ascii", 8, 12) === "WEBP"
+    ) {
+        extension = "webp";
+    } else {
+        return ApiResponse.error(res, "The uploaded file is not a supported image.", null, 400);
+    }
+
+    const uploadsRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads"));
+    const imageDirectory = path.join(uploadsRoot, "profile-images");
+    await fs.mkdir(imageDirectory, { recursive: true });
+    const currentUser = await authService.getProfile(req.user.id);
+
+    const filename = `${req.user.id}-${randomUUID()}.${extension}`;
+    const imagePath = path.join(imageDirectory, filename);
+    const profileImage = `/uploads/profile-images/${filename}`;
+    await fs.writeFile(imagePath, buffer, { flag: "wx" });
+
+    try {
+        await authService.updateProfileImage(req.user.id, profileImage);
+    } catch (error) {
+        await fs.unlink(imagePath).catch((cleanupError) => {
+            if (cleanupError.code !== "ENOENT") {
+                logger.error(`Unable to remove failed profile photo upload: ${cleanupError.message}`);
+            }
+        });
+        throw error;
+    }
+
+    const previousImage = currentUser?.profileImage;
+    if (typeof previousImage === "string" && previousImage.startsWith("/uploads/profile-images/")) {
+        const previousFilename = path.basename(previousImage);
+        if (previousFilename === previousImage.slice("/uploads/profile-images/".length)) {
+            await fs.unlink(path.join(imageDirectory, previousFilename)).catch((error) => {
+                if (error.code !== "ENOENT") {
+                    logger.error(`Unable to remove replaced profile photo: ${error.message}`);
+                }
+            });
+        }
+    }
+
+    return ApiResponse.success(res, "Profile photo updated successfully.", { profileImage });
 });
 
 exports.getSessions = asyncHandler(async (req, res) => {

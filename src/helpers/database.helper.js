@@ -100,6 +100,13 @@ const ensureUserCompatibilityColumns = async () => {
         );
         logger.info("Added missing users.canDelete compatibility column.");
     }
+
+    if (!fieldNames.has("profileImage")) {
+        await db.sequelize.query(
+            `ALTER TABLE \`${tableName}\` ADD COLUMN \`profileImage\` VARCHAR(512) NULL`
+        );
+        logger.info("Added missing users.profileImage compatibility column.");
+    }
 };
 
 const ensureProjectOnboardCompatibilityColumns = async () => {
@@ -152,6 +159,15 @@ const ensureTaskCompatibilityColumns = async () => {
             allowNull: true,
         });
         logger.info("Added missing tasks.reminderAt compatibility column.");
+    }
+
+    if (!columns.sortOrder) {
+        await queryInterface.addColumn(tableName, "sortOrder", {
+            type: db.Sequelize.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        });
+        logger.info("Added missing tasks.sortOrder compatibility column.");
     }
 };
 

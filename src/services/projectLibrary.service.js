@@ -38,6 +38,14 @@ function projectMemberIds(project) {
     ].filter((id) => Number.isFinite(id) && id > 0))];
 }
 
+function hasLibraryAdminAccess(actor) {
+    return actor.isSuperAdmin
+        || actor.roleSet?.has("manager")
+        || actor.roleSet?.has("admin")
+        || actor.roleSet?.has("administrator")
+        || actor.roleSet?.has("systemadmin");
+}
+
 function fail(message, status = 400) {
     const error = new Error(message);
     error.status = status;
@@ -77,8 +85,7 @@ class ProjectLibraryService {
         });
         if (!project) fail("Project not found.", 404);
 
-        const canAccess = actor.isSuperAdmin
-            || actor.roleSet?.has("manager")
+        const canAccess = hasLibraryAdminAccess(actor)
             || projectMemberIds(project).includes(Number(actor.id));
         if (!canAccess) fail("You do not have access to this project library.", 403);
         return project;

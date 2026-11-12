@@ -92,7 +92,7 @@ function normalizeOrder(value, fallback = 0) {
         return fallback;
     }
     const order = Number(value);
-    if (!Number.isInteger(order) || order < 0 || order > 100000) {
+    if (!Number.isInteger(order) || order < 0 || order > 3000) {
         throw httpError("Display order must be a non-negative whole number.");
     }
     return order;

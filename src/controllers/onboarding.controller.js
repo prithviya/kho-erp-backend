@@ -1,6 +1,9 @@
+const fs = require("fs");
 const onboarding = require("../services/onboarding.service");
 const ApiResponse = require("../helpers/apiResponse");
 const asyncHandler = require("../helpers/asyncHandler");
+const archiver = require("archiver");
+const path = require("path");
 
 exports.create = asyncHandler(async (req, res) => {
     const onboardingData = await onboarding.create(req.body);
@@ -88,6 +91,56 @@ exports.getAllRecords = asyncHandler(async (_req, res) => {
         "Onboarding records fetched successfully.",
         records
     );
+});
+
+exports.getOnboardingDocuments = asyncHandler(async (_req, res) => {
+    const documents = await onboarding.getOnboardingDocuments();
+    return ApiResponse.success(res, "Onboarding documents fetched successfully.", documents);
+});
+
+exports.downloadOnboardingDocuments = asyncHandler(async (req, res, next) => {
+    const files = await onboarding.getOnboardingDocumentArchiveFiles(req.body?.documents);
+    const maxArchiveSize = Number(process.env.ONBOARDING_DOCUMENT_MAX_ARCHIVE_SIZE || 1024 * 1024 * 1024);
+    const stats = await Promise.all(files.map(async (file) => {
+        try {
+            return await fs.promises.stat(file.path);
+        } catch (error) {
+            if (error.code === "ENOENT") {
+                const notFound = new Error("One or more selected onboarding documents are no longer available.");
+                notFound.status = 404;
+                throw notFound;
+            }
+            throw error;
+        }
+    }));
+    if (stats.reduce((total, fileStats) => total + fileStats.size, 0) > maxArchiveSize) {
+        const error = new Error("The selected documents exceed the maximum ZIP download size.");
+        error.status = 413;
+        throw error;
+    }
+
+    const archive = archiver("zip", { zlib: { level: 6 } });
+    const usedNames = new Map();
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="onboarding-documents.zip"');
+    archive.on("error", (error) => {
+        if (!res.headersSent) next(error);
+        else res.destroy(error);
+    });
+    archive.pipe(res);
+    for (const file of files) {
+        const safeName = path.basename(`${file.employeeName} - ${file.documentType} - ${file.name}`)
+            .replace(/[\\/:]/g, "_") || "document";
+        const key = safeName.toLowerCase();
+        const count = usedNames.get(key) || 0;
+        usedNames.set(key, count + 1);
+        const extension = path.extname(safeName);
+        const basename = path.basename(safeName, extension);
+        archive.file(file.path, {
+            name: count ? `${basename} (${count + 1})${extension}` : safeName,
+        });
+    }
+    await archive.finalize();
 });
 
 exports.getClaimedEmployeeCodes = asyncHandler(async (_req, res) => {

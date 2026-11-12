@@ -507,12 +507,61 @@ class TaskService {
         const project = task.project || await ProjectOnboard.findByPk(task.projectOnboardId);
         const isProjectSpoc = parseIds(project?.spocIds).some((spocId) => Number(spocId) === Number(actor.id));
         const isReportingHead = Number(task.reportingHeadId) === Number(actor.id)
-            || Number(project?.reportingHeadId) === Number(actor.id);
-        if (!actor.isSuperAdmin && !isProjectSpoc && !isReportingHead) {
+            || Number(project?.reportingHeadId) === Number(actor.id)
+            || parseIds(project?.projectManagerIds).some((id) => Number(id) === Number(actor.id));
+        if (!actor.isSuperAdmin && !isManager(actor) && !isProjectSpoc && !isReportingHead) {
             throw httpError("Only the task SPOC or reporting head can delete this task.", 403);
         }
         await taskRepository.delete(id);
         return true;
+    }
+
+    async reorderTasks(data = {}, actor = {}) {
+        const { projectOnboardId, taskOrders } = data;
+        if (!projectOnboardId || !Array.isArray(taskOrders) || !taskOrders.length) {
+            throw httpError("projectOnboardId and taskOrders are required.");
+        }
+
+        const project = await ProjectOnboard.findByPk(projectOnboardId);
+        if (!project) throw httpError("Project not found.", 404);
+
+        const me = Number(actor.id);
+        const isSpoc = parseIds(project.spocIds).some((id) => Number(id) === me);
+        const isReportingHead = parseIds(project.projectManagerIds).some((id) => Number(id) === me)
+            || Number(project.reportingHeadId) === me;
+
+        if (!actor.isSuperAdmin && !isManager(actor) && !isSpoc && !isReportingHead) {
+            throw httpError("Only project SPOC and Reporting Head can reorder tasks for this project.", 403);
+        }
+
+        await sequelize.transaction(async (transaction) => {
+            for (const item of taskOrders) {
+                const updateFields = { sortOrder: Number(item.sortOrder) };
+                if (item.serviceId !== undefined) {
+                    updateFields.serviceId = item.serviceId ? Number(item.serviceId) : null;
+                }
+                await Task.update(updateFields, {
+                    where: { id: Number(item.id), projectOnboardId: Number(projectOnboardId) },
+                    transaction
+                });
+            }
+        });
+
+        const memberIds = [...new Set([
+            ...parseIds(project.spocIds),
+            ...parseIds(project.projectManagerIds),
+            ...parseIds(project.assignedToIds),
+            Number(project.reportingHeadId)
+        ].map(Number).filter((id) => Number.isFinite(id) && id > 0 && id !== me))];
+
+        memberIds.forEach((userId) => {
+            emitToUser(userId, "task-reordered", {
+                projectOnboardId: Number(projectOnboardId),
+                taskOrders
+            });
+        });
+
+        return { success: true };
     }
 }
 

@@ -12,6 +12,7 @@ router.use("/menus", requireTrustedOrigin, require("./menu.routes"));
 router.use("/users", requireTrustedOrigin, require("./user.routes"));
 router.use("/user-roles", requireTrustedOrigin, require("./userRole.routes"));
 router.use("/activity-logs", requireTrustedOrigin, require("./activityLog.routes"));
+router.use("/onboarding-documents", require("./onboardingDocuments.routes"));
 
 const permissionedRoutes = [
     ["/lead", (req, action) => (
