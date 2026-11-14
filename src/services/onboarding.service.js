@@ -2243,31 +2243,56 @@ class OnboardingService extends BaseService {
         }).filter((document) => document.fileUrl || document.storedName);
     }
 
-    async getOnboardingDocumentArchiveFiles(selections) {
-        if (!Array.isArray(selections) || !selections.length || selections.length > 100) {
-            const error = new Error("Select between 1 and 100 onboarding documents to download.");
+    async getOnboardingDocumentArchiveFiles(selections, includeAll = false) {
+        let records;
+        let normalizedSelections;
+        if (includeAll) {
+            records = await db.OnboardingRecord.findAll({
+                attributes: ["cifid", "formData"],
+            });
+            normalizedSelections = records.flatMap((record) => {
+                const formData = this.parseJsonColumn(record.formData);
+                return this.sanitizeDocumentsForSnapshot(formData?.documents)
+                    .map((document, documentIndex) => ({
+                        cifid: Number(record.cifid),
+                        documentIndex,
+                        storedName: this.resolveOnboardingDocumentStoredName(document),
+                    }))
+                    .filter((document) => document.storedName)
+                    .map(({ cifid, documentIndex }) => ({ cifid, documentIndex }));
+            });
+        } else {
+            if (!Array.isArray(selections) || !selections.length || selections.length > 100) {
+                const error = new Error("Select between 1 and 100 onboarding documents to download.");
+                error.status = 400;
+                throw error;
+            }
+
+            normalizedSelections = selections.map((selection) => ({
+                cifid: Number(selection?.cifid),
+                documentIndex: Number(selection?.documentIndex),
+            }));
+            if (normalizedSelections.some(({ cifid, documentIndex }) => (
+                !Number.isInteger(cifid) || cifid < 1
+                || !Number.isInteger(documentIndex) || documentIndex < 0
+            ))) {
+                const error = new Error("One or more selected onboarding documents are invalid.");
+                error.status = 400;
+                throw error;
+            }
+
+            const cifids = [...new Set(normalizedSelections.map(({ cifid }) => cifid))];
+            records = await db.OnboardingRecord.findAll({
+                where: { cifid: { [Op.in]: cifids } },
+                attributes: ["cifid", "formData"],
+            });
+        }
+        if (!normalizedSelections.length) {
+            const error = new Error("No available onboarding documents were selected for download.");
             error.status = 400;
             throw error;
         }
 
-        const normalizedSelections = selections.map((selection) => ({
-            cifid: Number(selection?.cifid),
-            documentIndex: Number(selection?.documentIndex),
-        }));
-        if (normalizedSelections.some(({ cifid, documentIndex }) => (
-            !Number.isInteger(cifid) || cifid < 1
-            || !Number.isInteger(documentIndex) || documentIndex < 0
-        ))) {
-            const error = new Error("One or more selected onboarding documents are invalid.");
-            error.status = 400;
-            throw error;
-        }
-
-        const cifids = [...new Set(normalizedSelections.map(({ cifid }) => cifid))];
-        const records = await db.OnboardingRecord.findAll({
-            where: { cifid: { [Op.in]: cifids } },
-            attributes: ["cifid", "formData"],
-        });
         const recordsByCifid = new Map(records.map((record) => [
             Number(record.cifid),
             this.parseJsonColumn(record.formData),

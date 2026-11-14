@@ -35,6 +35,7 @@ const sections = [
             { name: "Recruitment", code: "RECRUITMENT", route: "/recruitment-process" },
             { name: "Onboarding", code: "ONBOARDING", route: "/onboarding" },
             { name: "Employee", code: "EMPLOYEE", route: "/employee" },
+          
         ],
     },
     {

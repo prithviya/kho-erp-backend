@@ -94,7 +94,7 @@ const permissionedRoutes = [
             .map((moduleCode) => `${moduleCode}.${action}`)
     ), "./projectLibrary.routes"],
     ["/project-chat", (req, action) => (
-        ["project_details", "project_onboard"]
+        ["project_details", "project_onboard", "assign_board", "tasks"]
             .map((moduleCode) => `${moduleCode}.${action}`)
     ), "./projectChat.routes"],
     ["/notifications", (req, action) => (

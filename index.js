@@ -24,7 +24,13 @@ if (process.env.NODE_ENV === "production") {
 /**
  * Security Middleware
  */
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            connectSrc: ["'self'", frontendOrigin],
+        },
+    },
+}));
 app.use(
     cors({
         origin: frontendUrl,
@@ -99,6 +105,12 @@ app.use("/uploads", express.static(uploadsPath, {
         );
     }
 }));
+app.use("/uploads", (_req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Uploaded file not found.",
+    });
+});
 const assetsPath = path.join(__dirname, "assets");
 if (fs.existsSync(assetsPath)) {
     app.use("/assets", express.static(assetsPath));

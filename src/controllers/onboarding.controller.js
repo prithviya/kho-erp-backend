@@ -99,7 +99,10 @@ exports.getOnboardingDocuments = asyncHandler(async (_req, res) => {
 });
 
 exports.downloadOnboardingDocuments = asyncHandler(async (req, res, next) => {
-    const files = await onboarding.getOnboardingDocumentArchiveFiles(req.body?.documents);
+    const files = await onboarding.getOnboardingDocumentArchiveFiles(
+        req.body?.documents,
+        req.body?.all === true
+    );
     const maxArchiveSize = Number(process.env.ONBOARDING_DOCUMENT_MAX_ARCHIVE_SIZE || 1024 * 1024 * 1024);
     const stats = await Promise.all(files.map(async (file) => {
         try {

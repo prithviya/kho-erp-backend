@@ -94,6 +94,14 @@ async function packageTarget({ targetName, domain, zipFileName }) {
     });
     archive.directory(buildDir, "build");
 
+    // Uploads and candidate assets
+    if (fs.existsSync(path.join(backendDir, "uploads"))) {
+      archive.directory(path.join(backendDir, "uploads"), "uploads");
+    }
+    if (fs.existsSync(path.join(backendDir, "assets", "resume"))) {
+      archive.directory(path.join(backendDir, "assets", "resume"), "assets/resume");
+    }
+
     archive.finalize();
   });
 
@@ -102,6 +110,7 @@ async function packageTarget({ targetName, domain, zipFileName }) {
 
 async function run() {
   const rootDir = path.resolve(__dirname, "../..");
+  const backendDir = path.join(rootDir, "kho-erp-backend");
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -126,6 +135,26 @@ async function run() {
     domain: "will.khosocial.com",
     zipFileName: "khosocial-live-production.zip",
   });
+
+  // Target 3: Standalone uploads.zip for quick upload
+  console.log("\nCreating standalone uploads.zip...");
+  const uploadsZipPath = path.join(rootDir, "uploads.zip");
+  if (fs.existsSync(uploadsZipPath)) fs.unlinkSync(uploadsZipPath);
+  await new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(uploadsZipPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    output.on("close", resolve);
+    archive.on("error", reject);
+    archive.pipe(output);
+    if (fs.existsSync(path.join(backendDir, "uploads"))) {
+      archive.directory(path.join(backendDir, "uploads"), "uploads");
+    }
+    if (fs.existsSync(path.join(backendDir, "assets", "resume"))) {
+      archive.directory(path.join(backendDir, "assets", "resume"), "assets/resume");
+    }
+    archive.finalize();
+  });
+  console.log("✅ uploads.zip created.");
 
   // Create legacy aliases and dated backups
   console.log("\nCreating convenient alias copies...");
@@ -153,6 +182,7 @@ async function run() {
   console.log("✅ Copies created:");
   console.log(`   - staging-khosocial-deployed.zip`);
   console.log(`   - will-khosocial-deployed.zip`);
+  console.log(`   - uploads.zip`);
   console.log(`   - deployment-packages-${dateStr}/khosocial-staging-deploy-${dateStr}.zip`);
   console.log(`   - deployment-packages-${dateStr}/khosocial-live-production-deploy-${dateStr}.zip`);
 
