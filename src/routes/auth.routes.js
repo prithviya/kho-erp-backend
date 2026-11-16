@@ -26,7 +26,8 @@ const profileImageUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024, files: 1 },
     fileFilter: (req, file, callback) => {
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+        const mime = String(file.mimetype || "").toLowerCase();
+        if (!["image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp"].includes(mime)) {
             return callback(new Error("Only JPEG, PNG, and WebP images are allowed."));
         }
         return callback(null, true);

@@ -221,10 +221,9 @@ exports.uploadProfileImage = asyncHandler(async (req, res) => {
     const { buffer } = req.file;
     let extension;
     if (
-        buffer.length >= 3 &&
+        buffer.length >= 2 &&
         buffer[0] === 0xff &&
-        buffer[1] === 0xd8 &&
-        buffer[2] === 0xff
+        buffer[1] === 0xd8
     ) {
         extension = "jpg";
     } else if (
@@ -242,7 +241,12 @@ exports.uploadProfileImage = asyncHandler(async (req, res) => {
         return ApiResponse.error(res, "The uploaded file is not a supported image.", null, 400);
     }
 
-    const uploadsRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads"));
+    const appRoot = path.resolve(__dirname, "../../");
+    const uploadsRoot = process.env.UPLOAD_DIR
+        ? (path.isAbsolute(process.env.UPLOAD_DIR)
+            ? process.env.UPLOAD_DIR
+            : path.resolve(appRoot, process.env.UPLOAD_DIR))
+        : path.join(appRoot, "uploads");
     const imageDirectory = path.join(uploadsRoot, "profile-images");
     await fs.mkdir(imageDirectory, { recursive: true });
     const currentUser = await authService.getProfile(req.user.id);

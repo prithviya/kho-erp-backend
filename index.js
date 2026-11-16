@@ -28,6 +28,8 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             connectSrc: ["'self'", frontendOrigin],
+            imgSrc: ["'self'", "data:", "blob:", frontendOrigin, "https:"],
+            mediaSrc: ["'self'", "data:", "blob:", frontendOrigin, "https:"],
         },
     },
 }));
@@ -94,7 +96,11 @@ app.get("/", (req, res, next) => {
  * Serve React Build (Only if build folder exists)
  */
 const buildPath = path.join(__dirname, "build");
-const uploadsPath = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "uploads"));
+const uploadsPath = process.env.UPLOAD_DIR
+    ? (path.isAbsolute(process.env.UPLOAD_DIR)
+        ? process.env.UPLOAD_DIR
+        : path.resolve(__dirname, process.env.UPLOAD_DIR))
+    : path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
 app.use("/uploads", express.static(uploadsPath, {
     setHeaders: (res) => {
