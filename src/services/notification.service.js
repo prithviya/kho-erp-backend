@@ -59,6 +59,27 @@ class NotificationService {
         })));
     }
 
+    async createGroupMentionNotifications({ userIds, groupId, groupName, message, sender, transaction }) {
+        const uniqueIds = [...new Set(userIds.map(Number).filter((id) => id && id !== Number(sender.id)))];
+        if (!uniqueIds.length) return [];
+        const senderName = `${sender.firstName || ""} ${sender.lastName || ""}`.trim() || sender.email || "A teammate";
+        const snippet = String(message || "").slice(0, 160);
+        return Notification.bulkCreate(uniqueIds.map((userId) => ({
+            userId,
+            type: "GROUP_CHAT_MENTION",
+            projectOnboardId: null,
+            message: `${senderName} mentioned you in ${groupName}.`,
+            metadata: {
+                groupId: Number(groupId),
+                groupName,
+                senderName,
+                message,
+                snippet,
+                route: `/group-chat?groupId=${Number(groupId)}`,
+            },
+        })), { transaction });
+    }
+
     async createTaskNotifications({ task, actor, event = "updated" }) {
         const project = await ProjectOnboard.findByPk(task.projectOnboardId, {
             include: [{

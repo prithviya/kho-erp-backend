@@ -109,6 +109,9 @@ db.TaskActivity = require("./taskActivity.model")( sequelize, DataTypes );
 db.ActivityLog = require("./activityLog.model")( sequelize, DataTypes );
 db.TaskChatMessage = require("./taskChatMessage.model")( sequelize, DataTypes );
 db.ProjectChatMessage = require("./projectChatMessage.model")( sequelize, DataTypes );
+db.GroupChat = require("./groupChat.model")(sequelize, DataTypes);
+db.GroupChatMember = require("./groupChatMember.model")(sequelize, DataTypes);
+db.GroupChatMessage = require("./groupChatMessage.model")(sequelize, DataTypes);
 db.Notification = require("./notification.model")( sequelize, DataTypes );
 db.Employee = require("./employee.model")( sequelize, DataTypes );
 db.Payroll = require("./payroll.model")( sequelize, DataTypes );
@@ -428,6 +431,58 @@ db.ProjectChatMessage.belongsTo(db.User, {
 db.User.hasMany(db.ProjectChatMessage, {
     foreignKey: "senderId",
     as: "projectChatMessages",
+});
+
+db.GroupChat.belongsTo(db.User, {
+    foreignKey: "createdBy",
+    as: "creator",
+});
+
+db.User.hasMany(db.GroupChat, {
+    foreignKey: "createdBy",
+    as: "createdGroupChats",
+});
+
+db.GroupChat.hasMany(db.GroupChatMember, {
+    foreignKey: "groupId",
+    as: "members",
+    onDelete: "CASCADE",
+});
+
+db.GroupChatMember.belongsTo(db.GroupChat, {
+    foreignKey: "groupId",
+    as: "group",
+});
+
+db.GroupChatMember.belongsTo(db.User, {
+    foreignKey: "userId",
+    as: "user",
+});
+
+db.User.hasMany(db.GroupChatMember, {
+    foreignKey: "userId",
+    as: "groupChatMemberships",
+});
+
+db.GroupChat.hasMany(db.GroupChatMessage, {
+    foreignKey: "groupId",
+    as: "messages",
+    onDelete: "CASCADE",
+});
+
+db.GroupChatMessage.belongsTo(db.GroupChat, {
+    foreignKey: "groupId",
+    as: "group",
+});
+
+db.GroupChatMessage.belongsTo(db.User, {
+    foreignKey: "senderId",
+    as: "sender",
+});
+
+db.User.hasMany(db.GroupChatMessage, {
+    foreignKey: "senderId",
+    as: "groupChatMessages",
 });
 
 db.User.hasMany(db.Notification, {

@@ -121,6 +121,13 @@ async function emitToUser(userId, event, payload) {
     if (!io) return;
     try {
         const user = await loadUserWithPermissions(userId);
+        if (["group-chat-message", "group-chat-updated", "group-chat-removed", "group-chat-deleted", "group-chat-mention"].includes(event)) {
+            if (!user?.isActive) return;
+            for (const socketId of userSockets.get(Number(userId)) || []) {
+                io.to(socketId).emit(event, payload);
+            }
+            return;
+        }
         if (!hasEventPermission(user, event)) {
             return;
         }

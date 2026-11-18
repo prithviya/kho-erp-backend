@@ -67,6 +67,8 @@ const authenticate = async (req, res, next) => {
             id: user.id,
             email: user.email,
             firstName: user.firstName,
+            lastName: user.lastName,
+            profileImage: user.profileImage,
             employeeRecord: user.employeeRecord,
             roles: user.roles || [],
             roleSet,

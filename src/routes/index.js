@@ -13,6 +13,8 @@ router.use("/users", requireTrustedOrigin, require("./user.routes"));
 router.use("/user-roles", requireTrustedOrigin, require("./userRole.routes"));
 router.use("/activity-logs", requireTrustedOrigin, require("./activityLog.routes"));
 router.use("/onboarding-documents", require("./onboardingDocuments.routes"));
+router.use("/group-chat", require("./groupChat.routes"));
+router.use("/common-wall", require("./commonWall.routes"));
 
 const permissionedRoutes = [
     ["/lead", (req, action) => (

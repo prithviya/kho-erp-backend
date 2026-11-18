@@ -36,6 +36,11 @@ module.exports = (sequelize, DataTypes) => {
                 }
             },
 
+            employmentType: {
+                type: DataTypes.STRING(100),
+                allowNull: true,
+            },
+
             requiredSkills: {
                 type: DataTypes.STRING(255),
                 allowNull: false
